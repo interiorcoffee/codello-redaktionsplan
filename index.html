@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Redaktionsplan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap">
+<style>
+:root{
+  --paper:#FFFFFF; --wash:#F1F7F3; --mint:#CBE7D8; --mint-deep:#2F6B55; --bordeaux:#8A2335;
+  --amber:#A86B12; --ink:#1E2623; --muted:#5F6C66; --line:#DCE6E0; --scrim:rgba(20,30,26,.38);
+  --tile:3/4;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#131816; --wash:#1B2320; --mint:#274236; --mint-deep:#9ED5BB; --bordeaux:#E27F90;
+    --amber:#E3AE5B; --ink:#E8EFEB; --muted:#9BA9A3; --line:#2B3632; --scrim:rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#131816; --wash:#1B2320; --mint:#274236; --mint-deep:#9ED5BB; --bordeaux:#E27F90;
+  --amber:#E3AE5B; --ink:#E8EFEB; --muted:#9BA9A3; --line:#2B3632; --scrim:rgba(0,0,0,.55);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.5 "Gill Sans","Gill Sans MT",Lato,Calibri,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+img{max-width:100%}
+:focus-visible{outline:2px solid var(--mint-deep);outline-offset:2px}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--paper);border-bottom:1px solid var(--line)}
+.topin{max-width:1140px;margin:0 auto;padding:14px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:14px 28px}
+.brand{font-weight:400;letter-spacing:.14em;font-size:15px}
+.brand span{letter-spacing:0;color:var(--muted);margin-left:8px}
+nav.tabs{display:flex;gap:4px;margin-left:auto}
+nav.tabs button{background:none;border:0;padding:8px 14px;border-radius:999px;cursor:pointer;color:var(--muted)}
+nav.tabs button[aria-selected="true"]{background:var(--mint);color:var(--ink)}
+
+main{max-width:1140px;margin:0 auto;padding:28px 20px 80px}
+.monthbar{display:flex;align-items:baseline;gap:16px;margin-bottom:26px;flex-wrap:wrap}
+.monthbar h1{font-weight:300;font-size:clamp(34px,6vw,54px);line-height:1.05;margin:0;letter-spacing:-.01em}
+.monthbar .nav{display:flex;gap:6px}
+.round{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-size:18px;line-height:1}
+.round:hover{background:var(--wash)}
+
+.banner{background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:20px;font-size:14px;color:var(--muted)}
+
+.feedwrap{display:grid;grid-template-columns:minmax(0,560px) minmax(0,1fr);gap:44px;align-items:start}
+@media (max-width:860px){.feedwrap{grid-template-columns:1fr;gap:28px}.side{order:-1}}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.tile{position:relative;aspect-ratio:var(--tile);background:var(--wash);border:0;padding:0;margin:0;cursor:pointer;overflow:hidden;display:block;width:100%;transition:opacity .2s}
+.tile img{width:100%;height:100%;object-fit:cover;display:block}
+.tile.dim{opacity:.25}
+.tbar{position:absolute;left:0;top:0;bottom:0;width:5px}
+.ticon{position:absolute;top:7px;right:7px;width:20px;height:20px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.tph{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:10px;color:var(--muted);font-size:13px;line-height:1.3}
+.tph strong{color:var(--ink);font-weight:400;font-size:14px}
+.tmeta{position:absolute;left:8px;bottom:8px;background:rgba(255,255,255,.93);color:#1E2623;font-size:12px;border-radius:999px;padding:2px 9px 2px 7px;display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.s-draft{background:#A7B2AD}.s-review{background:var(--amber)}.s-changes{background:var(--bordeaux)}.s-approved{background:var(--mint-deep)}
+.tflag{position:absolute;top:7px;left:12px;width:12px;height:12px;border-radius:50%;border:2px solid #fff;background:var(--bordeaux);box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+.empty{grid-column:1/-1;border:1px dashed var(--line);border-radius:12px;padding:34px 22px;text-align:center;color:var(--muted)}
+
+.side h2{font-size:13px;font-weight:700;margin:0 0 8px;color:var(--muted);letter-spacing:.02em}
+.side section{padding:0 0 22px;margin-bottom:22px;border-bottom:1px solid var(--line)}
+.side section:last-child{border-bottom:0}
+.brief{white-space:pre-wrap;font-size:15px;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:5px 12px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.legend{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:15px}
+.legend li{display:flex;align-items:center;gap:9px}
+.legend .n{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.sw{width:12px;height:12px;border-radius:3px;flex:none}
+.warn{color:var(--bordeaux);font-size:14px;margin:10px 0 0}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.rhythm{font-size:15px;margin:0}
+
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:999px;padding:9px 16px;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:6px}
+.btn.ghost{background:var(--paper);color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{background:var(--wash)}
+.btn.ok{background:var(--mint-deep);border-color:var(--mint-deep);color:var(--paper)}
+.btn.warnb{background:var(--paper);border-color:var(--bordeaux);color:var(--bordeaux)}
+.btn:disabled{opacity:.45;cursor:default}
+.link{background:none;border:0;padding:4px 0;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-size:14px}
+.link.danger{color:var(--bordeaux)}
+
+label.f{display:block;margin:0 0 16px;font-size:14px;color:var(--muted)}
+label.f input,label.f select,label.f textarea,.slide textarea,.cform textarea,.plan input,.plan textarea{display:block;width:100%;margin-top:5px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--paper);color:var(--ink);font-size:15px}
+textarea{resize:vertical;line-height:1.45}
+.count{display:block;text-align:right;font-size:12px;margin-top:3px}
+.count.over{color:var(--bordeaux)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+fieldset.seg{border:0;padding:0;margin:0 0 16px}
+fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5px}
+.segs{display:flex;border:1px solid var(--line);border-radius:999px;padding:3px;gap:3px}
+.segs label{flex:1;text-align:center;border-radius:999px;padding:6px 8px;cursor:pointer;font-size:14px}
+.segs input{position:absolute;opacity:0;pointer-events:none}
+.segs label:has(input:checked){background:var(--mint);}
+.segs label:has(input:focus-visible){outline:2px solid var(--mint-deep)}
+
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--paper);z-index:21;display:flex;flex-direction:column;border-left:1px solid var(--line);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.dh{display:flex;align-items:flex-start;gap:12px;padding:18px 22px 14px;border-bottom:1px solid var(--line)}
+.dh h2{margin:0;font-weight:300;font-size:26px;line-height:1.15}
+.dh p{margin:0 0 2px;color:var(--muted);font-size:14px}
+.dh .round{margin-left:auto;flex:none}
+.dbody{overflow:auto;padding:20px 22px 48px;flex:1}
+.imgrow{display:flex;gap:16px;align-items:flex-end;margin-bottom:20px}
+.thumb{width:132px;flex:none;aspect-ratio:var(--tile);background:var(--wash);border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center;padding:0}
+.thumb.story{aspect-ratio:9/16;width:110px}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.imgacts{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.slide{border-left:3px solid var(--mint);padding:2px 0 2px 12px;margin-bottom:12px}
+.slide .sh{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+.box{background:var(--wash);border-radius:12px;padding:16px 16px 6px;margin:6px 0 20px}
+.box h3{font-size:14px;margin:0 0 10px;font-weight:700}
+.approve{border-top:1px solid var(--line);margin-top:10px;padding-top:18px}
+.approve h3{font-size:14px;margin:0 0 8px;font-weight:700;color:var(--muted)}
+.state{display:flex;align-items:center;gap:8px;font-size:17px;margin:0 0 12px}
+.state small{color:var(--muted);font-size:13px}
+.comments{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:10px}
+.comments li{background:var(--wash);border-radius:10px;padding:9px 12px;font-size:15px}
+.comments .cm{font-size:12px;color:var(--muted);margin-bottom:2px}
+.comments p{margin:0;white-space:pre-wrap}
+.cform{display:grid;gap:8px;margin-bottom:22px}
+.cform .btn{justify-self:start}
+
+.days{display:grid;gap:6px;margin:6px 0 18px}
+.day{display:grid;grid-template-columns:120px 150px;gap:12px;align-items:center}
+.day label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.day input[type=time]{margin:0}
+.day input[type=checkbox]{width:18px;height:18px;margin:0;accent-color:var(--mint-deep)}
+.plan{max-width:720px}
+.plan h2{font-weight:300;font-size:26px;margin:34px 0 6px}
+.plan h2:first-child{margin-top:0}
+.plan .hint{color:var(--muted);font-size:14px;margin:0 0 14px}
+.pillar{display:grid;grid-template-columns:36px 1fr 1.6fr 30px;gap:10px;align-items:center;margin-bottom:8px}
+.pillar input{margin:0}
+.swbtn{width:30px;height:30px;border-radius:8px;border:2px solid var(--paper);box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.x{background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer}
+@media (max-width:600px){.pillar{grid-template-columns:36px 1fr 30px}.pillar .pdesc{grid-column:2/3}}
+
+.storyday{margin-bottom:28px}
+.storyday h2{font-weight:300;font-size:22px;margin:0 0 10px;display:flex;align-items:baseline;gap:12px}
+.storyday h2 .link{font-size:13px}
+.srow{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px}
+.scard{flex:none;width:150px;border:0;background:none;padding:0;text-align:left;cursor:pointer}
+.scard .sthumb{aspect-ratio:9/16;background:var(--wash);border-radius:10px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;color:var(--ink);font-size:14px;line-height:1.3}
+.scard .sthumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scard .sthumb .ov{position:relative;background:rgba(255,255,255,.9);color:#1E2623;border-radius:6px;padding:4px 7px;font-size:13px}
+.scard .sm{font-size:13px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:6px}
+
+.modal{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px}
+.mbox{position:relative;background:var(--paper);border-radius:16px;padding:22px;width:min(520px,100%);max-height:90vh;overflow:auto;border:1px solid var(--line)}
+.mbox h2{margin:0 0 6px;font-weight:300;font-size:24px}
+.mbox p{color:var(--muted);font-size:14px;margin:0 0 14px}
+.prev{position:relative;margin:0 0 14px;background:var(--wash);border-radius:8px;overflow:hidden}
+.prev img{display:block;width:100%}
+.prev .lines{position:absolute;inset:0;pointer-events:none}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-size:14px;z-index:40;max-width:90vw}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.lbox{width:min(380px,100%)}
+.lbox h1{font-weight:300;font-size:40px;margin:18px 0 22px}
+.lbox .hint{color:var(--muted);font-size:14px;margin-top:18px}
+.fatal{max-width:560px;margin:80px auto;padding:0 20px;color:var(--muted)}
+#logout{margin-left:6px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+</head>
+<body>
+<section id="login" class="login" hidden>
+  <div class="lbox">
+    <div class="brand"><span class="cname"></span><span>Redaktionsplan</span></div>
+    <h1>Anmelden</h1>
+    <form id="lform">
+      <label class="f">E-Mail<input type="email" id="lmail" required autocomplete="username"></label>
+      <label class="f">Passwort<input type="password" id="lpw" required autocomplete="current-password"></label>
+      <button class="btn" type="submit" id="lbtn">Anmelden</button>
+      <p id="lerr" class="warn" hidden></p>
+    </form>
+    <p class="hint">Deine Zugangsdaten bekommst du per Mail. Passwort vergessen? Kurz melden, dann wird es zurückgesetzt.</p>
+  </div>
+</section>
+<div class="fatal" id="fatal" hidden></div>
+
+<div id="app" hidden>
+<header class="top"><div class="topin">
+  <div class="brand"><span class="cname"></span><span>Redaktionsplan</span></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="feed" aria-selected="true">Feed</button>
+    <button role="tab" data-tab="stories" aria-selected="false">Stories</button>
+    <button role="tab" data-tab="plan" aria-selected="false">Planung</button>
+    <button class="link" id="logout">Abmelden</button>
+  </nav>
+</div></header>
+
+<main>
+  <div class="monthbar">
+    <h1 id="monthTitle"></h1>
+    <div class="nav"><button class="round" id="prevM" aria-label="Vorheriger Monat">‹</button><button class="round" id="nextM" aria-label="Nächster Monat">›</button></div>
+  </div>
+  <section id="p-feed"></section>
+  <section id="p-stories" hidden></section>
+  <section id="p-plan" hidden></section>
+</main>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Details"></aside>
+<div class="modal" id="modal" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const WD=['So','Mo','Di','Mi','Do','Fr','Sa'];
+const WD_LONG=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+const WD_ORDER=[1,2,3,4,5,6,0];
+const MONTHS=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const FORMATS={single:'Einzelbild',carousel:'Karussell',reel:'Reel'};
+const STATUS={draft:'Entwurf',review:'Zur Freigabe',changes:'Anpassung nötig',approved:'Freigegeben'};
+const STORY_FORMATS=['Bild mit Overlay','Video','Link-Sticker','Umfrage','Quiz','Countdown','Frage-Sticker','Produkt-Sticker','Reshare'];
+const PCOLORS=['#2F6B55','#8A2335','#C98B2B','#4A6FA5','#B5688A','#6E7D3A','#7A5C99','#3A8C8C'];
+const RATIOS={'3/4':4/3,'4/5':5/4,'1/1':1};
+
+const now=new Date();
+const START='2026-10';
+const CFG=window.PLAN_CONFIG||{};
+const S={month:ym(now)<START?START:ym(now),tab:'feed',settings:{perWeek:'',days:{},pillars:[],tileRatio:'3/4'},monthDoc:{},
+  posts:[],stories:[],openKind:null,openId:null,filter:'all',sb:null,me:'',members:{},readonly:false};
+const pend={};
+
+function ym(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function newId(p){return p+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function parseD(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+function isoD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function fmtShort(s){if(!s)return 'ohne Datum';const d=parseD(s);return WD[d.getDay()]+' '+d.getDate()+'.'+(d.getMonth()+1)+'.'}
+function fmtLong(s){if(!s)return 'Noch kein Datum';const d=parseD(s);return WD_LONG[d.getDay()]+', '+d.getDate()+'. '+MONTHS[d.getMonth()]}
+function monthLabel(m){const [y,mo]=m.split('-').map(Number);return MONTHS[mo-1]+' '+y}
+const signed={};const need=new Set();let signT=null;
+function imgTag(v,alt){
+  if(!v)return '';
+  if(v.startsWith('sb:')){const p=v.slice(3);
+    if(!signed[p]){need.add(p);clearTimeout(signT);signT=setTimeout(signAll,30)}
+    return `<img data-sb="${esc(p)}" ${signed[p]?`src="${esc(signed[p])}"`:''} alt="${esc(alt)}" loading="lazy">`}
+  return `<img src="${esc(v)}" alt="${esc(alt)}" loading="lazy">`;
+}
+async function signAll(){
+  const paths=[...need];need.clear();if(!paths.length||!S.sb)return;
+  const {data,error}=await S.sb.storage.from('tiles').createSignedUrls(paths,60*60*12);
+  if(error){console.error(error);return}
+  (data||[]).forEach((d,i)=>{if(d&&d.signedUrl)signed[paths[i]]=d.signedUrl});
+  document.querySelectorAll('img[data-sb]').forEach(i=>{const u=signed[i.dataset.sb];if(u&&i.getAttribute('src')!==u)i.src=u});
+}
+function removeFile(v){if(v&&v.startsWith('sb:')&&S.sb)S.sb.storage.from('tiles').remove([v.slice(3)]).then(({error})=>{if(error)console.warn(error)})}
+function nameFor(e){return e?(S.members[String(e).toLowerCase()]||e):'Jemand'}
+function pillar(id){return S.settings.pillars.find(p=>p.id===id)}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,3800)}
+function sortKey(p){return (p.date||'0000-00-00')+' '+(p.time||'00:00')}
+function gridOrder(){return [...S.posts].sort((a,b)=>sortKey(b).localeCompare(sortKey(a)))}
+
+/* ---------- speichern ---------- */
+const Q={};
+function errMsg(e){
+  const m=String((e&&(e.message||e.error_description))||'');
+  if(e&&(e.code==='42501'||/row-level security|permission/i.test(m)))return 'Dafür fehlt die Berechtigung. Bitte neu anmelden.';
+  if(/JWT|expired/i.test(m))return 'Die Anmeldung ist abgelaufen. Bitte neu anmelden.';
+  return 'Speichern hat nicht geklappt. Bitte nochmal versuchen.';
+}
+function enqueue(key,fn){pend[key]=(pend[key]||0)+1;
+  const p=(Q[key]||Promise.resolve()).then(fn).catch(e=>{console.error(e);toast(errMsg(e))}).finally(()=>{pend[key]--});
+  Q[key]=p;return p}
+function clean(o){const b=JSON.parse(JSON.stringify(o));delete b.id;return b}
+function save(coll,obj){
+  const row={id:obj.id,month:obj.month,data:clean(obj),updated_at:new Date().toISOString()};
+  return enqueue(obj.id,async()=>{const {error}=await S.sb.from(coll).upsert(row);if(error)throw error});
+}
+function remove(coll,id){return enqueue(id,async()=>{const {error}=await S.sb.from(coll).delete().eq('id',id);if(error)throw error})}
+function saveSettings(){
+  const row={id:'main',data:JSON.parse(JSON.stringify(S.settings)),updated_at:new Date().toISOString()};
+  return enqueue('settings',async()=>{const {error}=await S.sb.from('settings').upsert(row);if(error)throw error});
+}
+function saveMonth(){
+  const row={id:S.month,data:JSON.parse(JSON.stringify(S.monthDoc)),updated_at:new Date().toISOString()};
+  return enqueue('m:'+S.month,async()=>{const {error}=await S.sb.from('months').upsert(row);if(error)throw error});
+}
+function mergeRows(rows,local){
+  const byId={};local.forEach(x=>byId[x.id]=x);
+  const out=(rows||[]).map(r=>pend[r.id]>0&&byId[r.id]?byId[r.id]:{id:r.id,...r.data});
+  local.forEach(x=>{if(pend[x.id]>0&&!out.some(o=>o.id===x.id))out.push(x)});
+  return out;
+}
+async function loadSettings(){
+  const {data,error}=await S.sb.from('settings').select('data').eq('id','main').maybeSingle();
+  if(error){console.error(error);return}
+  if(data&&!(pend.settings>0)){const d=data.data||{};S.settings={perWeek:d.perWeek??'',days:d.days||{},pillars:d.pillars||[],tileRatio:d.tileRatio||'3/4'}}
+}
+async function loadMembers(){
+  const {data}=await S.sb.from('members').select('email,name');
+  S.members={};(data||[]).forEach(m=>{if(m.email)S.members[m.email.toLowerCase()]=m.name||m.email});
+}
+async function loadMonth(){
+  const m=S.month;
+  const [p,s,mo]=await Promise.all([
+    S.sb.from('posts').select('id,data').eq('month',m),
+    S.sb.from('stories').select('id,data').eq('month',m),
+    S.sb.from('months').select('data').eq('id',m).maybeSingle()]);
+  if(m!==S.month)return;
+  const err=p.error||s.error||mo.error;if(err){console.error(err);toast('Daten konnten nicht geladen werden.');return}
+  S.posts=mergeRows(p.data,S.posts);S.stories=mergeRows(s.data,S.stories);
+  if(!(pend['m:'+m]>0))S.monthDoc=mo.data?{...mo.data.data}:{};
+  render();refreshLive();
+}
+let rtT=null;
+function subscribeRealtime(){
+  S.sb.channel('plan-changes').on('postgres_changes',{event:'*',schema:'public'},()=>{
+    clearTimeout(rtT);rtT=setTimeout(async()=>{await Promise.all([loadSettings(),loadMembers()]);await loadMonth()},500);
+  }).subscribe();
+}
+
+/* ---------- Bilder ---------- */
+function loadImg(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file);const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Bild konnte nicht gelesen werden'));i.src=u})}
+function cut(img,sx,sy,sw,sh,maxW){
+  const sc=Math.min(1,maxW/sw);const c=document.createElement('canvas');
+  c.width=Math.max(1,Math.round(sw*sc));c.height=Math.max(1,Math.round(sh*sc));
+  c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);return c;
+}
+async function storeCanvas(c){
+  const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.86));
+  const path=S.month+'/'+newId('i')+'.jpg';
+  const {error}=await S.sb.storage.from('tiles').upload(path,blob,{contentType:'image/jpeg'});
+  if(error){console.error(error);throw new Error('Bild konnte nicht hochgeladen werden.')}
+  return 'sb:'+path;
+}
+async function fileToStored(file,maxW){const img=await loadImg(file);return storeCanvas(cut(img,0,0,img.naturalWidth,img.naturalHeight,maxW))}
+
+/* ---------- Planungshilfen ---------- */
+function plannedDates(m){
+  const [y,mo]=m.split('-').map(Number);const n=new Date(y,mo,0).getDate();const out=[];
+  for(let d=1;d<=n;d++){const dt=new Date(y,mo-1,d);const cfg=S.settings.days[String(dt.getDay())];if(cfg&&cfg.on)out.push({date:isoD(dt),time:cfg.time||''})}
+  return out;
+}
+function repeats(){
+  const asc=[...S.posts].filter(p=>p.date).sort((a,b)=>sortKey(a).localeCompare(sortKey(b)));
+  const set=new Set();
+  for(let i=1;i<asc.length;i++){if(asc[i].pillar&&asc[i].pillar===asc[i-1].pillar)set.add(asc[i].id)}
+  return set;
+}
+function blankPost(date,time){return {id:newId('p'),month:(date||S.month).slice(0,7),date:date||'',time:time||'',format:'single',pillar:'',story:'',slides:[],hook:'',reelFlow:'',audio:'',caption:'',hashtags:'',products:'',status:'draft',comments:[],img:''}}
+function blankStory(date){return {id:newId('s'),month:(date||S.month).slice(0,7),date:date||'',format:'Bild mit Overlay',overlay:'',link:'',linkLabel:'',post:'',notes:'',status:'draft',comments:[],img:''}}
+
+/* ---------- Render ---------- */
+const ICON={
+  carousel:'<svg class="ticon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="7" width="13" height="13" rx="2"/><path d="M8 4h11a2 2 0 0 1 2 2v11"/></svg>',
+  reel:'<svg class="ticon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M10 8.5v7l6-3.5z" fill="#fff"/></svg>'
+};
+function render(){
+  document.documentElement.style.setProperty('--tile',S.settings.tileRatio||'3/4');
+  $('#monthTitle').textContent=monthLabel(S.month);
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===S.tab)));
+  ['feed','stories','plan'].forEach(t=>$('#p-'+t).hidden=t!==S.tab);
+  if(S.tab==='feed')renderFeed();
+  if(S.tab==='stories')renderStories();
+  if(S.tab==='plan'&&!$('#p-plan').contains(document.activeElement))renderPlan();
+}
+function renderFeed(){
+  const list=gridOrder();const rep=repeats();
+  const counts={all:list.length,draft:0,review:0,changes:0,approved:0};
+  list.forEach(p=>counts[p.status||'draft']++);
+  const tiles=list.map(p=>{
+    const pl=pillar(p.pillar);const st=p.status||'draft';
+    const dim=S.filter!=='all'&&st!==S.filter;
+    return `<button class="tile${dim?' dim':''}" data-open="${p.id}" aria-label="${esc(fmtLong(p.date)+', '+FORMATS[p.format||'single']+', '+STATUS[st])}">
+      ${p.img?imgTag(p.img,''):`<span class="tph"><strong>${esc(pl?pl.name:FORMATS[p.format||'single'])}</strong>Kachel fehlt noch</span>`}
+      ${pl?`<span class="tbar" style="background:${esc(pl.color)}"></span>`:''}
+      ${ICON[p.format]||''}
+      ${rep.has(p.id)?'<span class="tflag" title="Gleiche Content-Säule wie der Post davor"></span>':''}
+      <span class="tmeta"><span class="dot s-${st}"></span>${esc(fmtShort(p.date))}${p.time?' '+esc(p.time):''}</span>
+    </button>`}).join('');
+  const pc={};list.forEach(p=>{if(p.pillar)pc[p.pillar]=(pc[p.pillar]||0)+1});
+  const days=WD_ORDER.filter(d=>S.settings.days[String(d)]?.on).map(d=>WD_LONG[d]+(S.settings.days[String(d)].time?' '+S.settings.days[String(d)].time+' Uhr':''));
+  const brief=S.monthDoc.briefing||'';
+  $('#p-feed').innerHTML=`<div class="feedwrap">
+    <div class="grid">${tiles||`<div class="empty">Für ${esc(monthLabel(S.month))} ist noch nichts geplant.<br>Lade die Feed-Übersicht hoch oder lege die Termine aus dem Rhythmus an.</div>`}</div>
+    <div class="side">
+      <section><h2>Briefing für ${esc(MONTHS[+S.month.slice(5)-1])}</h2>
+        ${brief?`<p class="brief">${esc(brief.length>420?brief.slice(0,420)+'…':brief)}</p>`:`<p class="brief" style="color:var(--muted)">Noch kein Briefing. Im Tab Planung eintragen.</p>`}</section>
+      <section><h2>Freigabestand</h2><div class="chips">
+        ${['all','draft','review','changes','approved'].map(k=>`<button class="chip" data-filter="${k}" aria-pressed="${S.filter===k}">${k==='all'?'':`<span class="dot s-${k}"></span>`}${k==='all'?'Alle':STATUS[k]} ${counts[k]}</button>`).join('')}
+      </div></section>
+      <section><h2>Content-Säulen</h2>
+        ${S.settings.pillars.length?`<ul class="legend">${S.settings.pillars.map(p=>`<li><span class="sw" style="background:${esc(p.color)}"></span>${esc(p.name||'Ohne Namen')}<span class="n">${pc[p.id]||0}</span></li>`).join('')}</ul>`:'<p class="rhythm" style="color:var(--muted)">Noch keine Säulen angelegt.</p>'}
+        ${rep.size?`<p class="warn">${rep.size===1?'Einmal folgt':rep.size+' Mal folgt'} dieselbe Säule direkt aufeinander. Markiert mit dem roten Punkt.</p>`:''}
+      </section>
+      <section><h2>Rhythmus</h2><p class="rhythm">${S.settings.perWeek?esc(S.settings.perWeek)+' Posts pro Woche':'Frequenz noch offen'}${days.length?'<br>'+esc(days.join(', ')):''}</p></section>
+      <section class="actions" ${S.readonly?'hidden':''}>
+        <button class="btn" data-act="feedupload">Feed-Übersicht hochladen</button>
+        <button class="btn ghost" data-act="gen">Termine aus Rhythmus anlegen</button>
+        <button class="btn ghost" data-act="addpost">Post hinzufügen</button>
+      </section>
+    </div></div>`;
+}
+function renderStories(){
+  const by={};S.stories.forEach(s=>{const k=s.date||'';(by[k]=by[k]||[]).push(s)});
+  const keys=Object.keys(by).sort((a,b)=>(a||'9999').localeCompare(b||'9999'));
+  const html=keys.map(k=>`<div class="storyday"><h2>${esc(fmtLong(k))}${S.readonly?'':` <button class="link" data-act="addstory" data-date="${esc(k)}">Weitere Story an diesem Tag</button>`}</h2><div class="srow">
+    ${by[k].map(s=>{const st=s.status||'draft';return `<button class="scard" data-openstory="${s.id}">
+      <div class="sthumb">${s.img?imgTag(s.img,''):''}${s.overlay?`<span class="ov">${esc(s.overlay.length>70?s.overlay.slice(0,70)+'…':s.overlay)}</span>`:(s.img?'':'<span style="color:var(--muted)">Noch kein Overlay</span>')}</div>
+      <div class="sm"><span class="dot s-${st}"></span>${esc(s.format||'Story')}</div></button>`}).join('')}
+  </div></div>`).join('');
+  $('#p-stories').innerHTML=`${S.readonly?'':'<div class="actions" style="margin-bottom:24px"><button class="btn" data-act="addstory" data-date="">Story hinzufügen</button></div>'}
+    ${html||`<div class="empty">Noch keine Stories für ${esc(monthLabel(S.month))} geplant.</div>`}`;
+}
+function renderPlan(){
+  const s=S.settings;const dis=S.readonly?'disabled':'';
+  $('#p-plan').innerHTML=`<div class="plan">
+    <h2>Briefing für ${esc(monthLabel(S.month))}</h2>
+    <p class="hint">Was CODELLO für diesen Monat vorgibt: Themen, Kampagnen, Produkte, Termine.</p>
+    <textarea rows="7" data-pf="briefing" ${dis}>${esc(S.monthDoc.briefing||'')}</textarea>
+
+    <h2>Postingfrequenz</h2>
+    <p class="hint">Gilt für alle Monate, bis ihr sie ändert.</p>
+    <label class="f" style="max-width:220px">Posts pro Woche<input type="number" min="0" max="21" data-sf="perWeek" value="${esc(s.perWeek)}" ${dis}></label>
+
+    <h2>Posting-Tage und Uhrzeiten</h2>
+    <p class="hint">Daraus entstehen mit „Termine aus Rhythmus anlegen“ die leeren Kacheln eines Monats.</p>
+    <div class="days">${WD_ORDER.map(d=>{const c=s.days[String(d)]||{};return `<div class="day"><label><input type="checkbox" data-day="${d}" ${c.on?'checked':''} ${dis}>${WD_LONG[d]}</label><input type="time" data-daytime="${d}" value="${esc(c.time||'')}" ${c.on?'':'disabled'} ${dis} aria-label="Uhrzeit ${WD_LONG[d]}"></div>`}).join('')}</div>
+
+    <h2>Content-Säulen</h2>
+    <p class="hint">Von CODELLO festgelegt. Jede Säule bekommt eine Farbe, damit man im Raster sieht, ob sie sich abwechseln.</p>
+    <div id="pillars">${s.pillars.map((p,i)=>`<div class="pillar">
+      <button class="swbtn" style="background:${esc(p.color)}" data-pcolor="${i}" aria-label="Farbe wechseln" ${dis}></button>
+      <input value="${esc(p.name)}" placeholder="Name der Säule" data-pname="${i}" ${dis}>
+      <input class="pdesc" value="${esc(p.desc||'')}" placeholder="Worum es geht" data-pdesc="${i}" ${dis}>
+      <button class="x" data-pdel="${i}" aria-label="Säule entfernen" ${dis}>×</button></div>`).join('')}</div>
+    ${S.readonly?'':'<button class="btn ghost" data-act="addpillar">Säule hinzufügen</button>'}
+
+    <h2>Kachelformat im Raster</h2>
+    <p class="hint">Instagram zeigt das Profilraster inzwischen im Hochformat 3:4.</p>
+    <div class="segs" style="max-width:360px">${Object.keys(RATIOS).map(r=>`<label><input type="radio" name="ratio" value="${r}" data-ratio ${s.tileRatio===r?'checked':''} ${dis}>${r.replace('/',':')}</label>`).join('')}</div>
+  </div>`;
+}
+
+/* ---------- Drawer ---------- */
+function current(){return (S.openKind==='post'?S.posts:S.stories).find(x=>x.id===S.openId)}
+function openItem(kind,id){S.openKind=kind;S.openId=id;buildDrawer()}
+function closeDrawer(){S.openId=null;S.openKind=null;$('#drawer').hidden=true;$('#scrim').hidden=true;$('#drawer').innerHTML=''}
+function buildDrawer(){
+  const it=current();if(!it){closeDrawer();return}
+  const d=$('#drawer');d.innerHTML=S.openKind==='post'?postForm(it):storyForm(it);
+  d.hidden=false;$('#scrim').hidden=false;refreshLive();
+  if(S.readonly)d.querySelectorAll('input,select,textarea,.dbody button:not([data-act=close])').forEach(e=>e.disabled=true);
+}
+function postForm(p){
+  const pl=pillar(p.pillar);const f=p.format||'single';
+  const capLen=(p.caption||'').length;const tags=((p.hashtags||'').match(/#[^\s#]+/g)||[]).length;
+  let fmt='';
+  if(f==='carousel'){
+    const sl=p.slides&&p.slides.length?p.slides:[''];
+    fmt=`<div class="box"><h3>Slides</h3>${sl.map((t,i)=>`<div class="slide"><div class="sh">Slide ${i+1}${sl.length>1?`<button class="link" data-act="rmslide" data-i="${i}">entfernen</button>`:''}</div><textarea rows="2" data-slide="${i}" placeholder="Motiv und Text auf der Slide">${esc(t)}</textarea></div>`).join('')}
+      <p><button class="link" data-act="addslide">Slide hinzufügen</button></p></div>`;
+  }else if(f==='reel'){
+    fmt=`<div class="box"><h3>Reel</h3>
+      <label class="f">Hook in den ersten Sekunden<input data-f="hook" value="${esc(p.hook)}"></label>
+      <label class="f">Ablauf und Text-Overlays<textarea rows="4" data-f="reelFlow">${esc(p.reelFlow)}</textarea></label>
+      <label class="f">Musik oder Voice-Over<input data-f="audio" value="${esc(p.audio)}"></label></div>`;
+  }
+  return `<div class="dh"><div><p>${esc(fmtLong(p.date))}${p.time?', '+esc(p.time)+' Uhr':''}</p><h2>${esc(FORMATS[f])}${pl?' für '+esc(pl.name):''}</h2></div><button class="round" data-act="close" aria-label="Schließen">×</button></div>
+  <div class="dbody">
+    <div class="imgrow"><div class="thumb">${p.img?imgTag(p.img,'Kachel'):'Noch keine Kachel'}</div>
+      <div class="imgacts"><label class="btn ghost">${p.img?'Kachel ersetzen':'Kachel hochladen'}<input type="file" accept="image/*" data-file="img" hidden></label>${p.img?'<button class="link" data-act="rmimg">Kachel entfernen</button>':''}</div></div>
+    <div class="row2"><label class="f">Datum<input type="date" data-f="date" value="${esc(p.date)}"></label><label class="f">Uhrzeit<input type="time" data-f="time" value="${esc(p.time)}"></label></div>
+    <fieldset class="seg"><legend>Format</legend><div class="segs">${Object.entries(FORMATS).map(([k,v])=>`<label><input type="radio" name="fmt" value="${k}" data-f="format" ${f===k?'checked':''}>${v}</label>`).join('')}</div></fieldset>
+    <label class="f">Content-Säule<select data-f="pillar"><option value="">Noch offen</option>${S.settings.pillars.map(x=>`<option value="${esc(x.id)}" ${x.id===p.pillar?'selected':''}>${esc(x.name||'Ohne Namen')}</option>`).join('')}</select></label>
+    <label class="f">Was hinter der Kachel steckt<textarea rows="3" data-f="story" placeholder="Welche Geschichte erzählt dieser Post?">${esc(p.story)}</textarea></label>
+    ${fmt}
+    <label class="f">Caption<textarea rows="7" data-f="caption">${esc(p.caption)}</textarea><span class="count${capLen>2200?' over':''}" id="capc">${capLen} von 2.200 Zeichen</span></label>
+    <label class="f">Hashtags im ersten Kommentar<input data-f="hashtags" value="${esc(p.hashtags)}" placeholder="#codello"><span class="count${tags>5?' over':''}" id="tagc">${tags} von maximal 5</span></label>
+    <label class="f">Produktverlinkung<input data-f="products" value="${esc(p.products)}" placeholder="Produkte oder Links"></label>
+    <div id="live"></div>
+    <button class="link danger" data-act="delete">Post löschen</button>
+  </div>`;
+}
+function storyForm(s){
+  const posts=gridOrder();
+  return `<div class="dh"><div><p>${esc(fmtLong(s.date))}</p><h2>Story: ${esc(s.format||'')}</h2></div><button class="round" data-act="close" aria-label="Schließen">×</button></div>
+  <div class="dbody">
+    <div class="imgrow"><div class="thumb story">${s.img?imgTag(s.img,'Story'):'Noch kein Bild'}</div>
+      <div class="imgacts"><label class="btn ghost">${s.img?'Bild ersetzen':'Bild hochladen'}<input type="file" accept="image/*" data-file="img" hidden></label>${s.img?'<button class="link" data-act="rmimg">Bild entfernen</button>':''}</div></div>
+    <div class="row2"><label class="f">Datum<input type="date" data-f="date" value="${esc(s.date)}"></label>
+      <label class="f">Format<select data-f="format">${STORY_FORMATS.map(x=>`<option ${x===s.format?'selected':''}>${esc(x)}</option>`).join('')}</select></label></div>
+    <label class="f">Gehört zu Post<select data-f="post"><option value="">Kein Post</option>${posts.map(p=>`<option value="${p.id}" ${p.id===s.post?'selected':''}>${esc(fmtShort(p.date)+', '+FORMATS[p.format||'single']+(pillar(p.pillar)?', '+pillar(p.pillar).name:''))}</option>`).join('')}</select></label>
+    <label class="f">Text-Overlay<textarea rows="3" data-f="overlay">${esc(s.overlay)}</textarea></label>
+    <div class="row2"><label class="f">Link<input type="url" data-f="link" value="${esc(s.link)}" placeholder="https://"></label><label class="f">Text auf dem Link-Sticker<input data-f="linkLabel" value="${esc(s.linkLabel)}"></label></div>
+    <label class="f">Idee und Ablauf<textarea rows="3" data-f="notes">${esc(s.notes)}</textarea></label>
+    <div id="live"></div>
+    <button class="link danger" data-act="delete">Story löschen</button>
+  </div>`;
+}
+function refreshLive(){
+  if(!S.openId)return;const it=current();const box=$('#live');
+  if(!it){closeDrawer();return}if(!box)return;
+  const st=it.status||'draft';const draft=$('#cnew')?$('#cnew').value:'';
+  const btn=(s,label,cls)=>st===s?'':`<button class="btn ${cls}" data-status="${s}">${label}</button>`;
+  box.innerHTML=`<section class="approve"><h3>Freigabe</h3>
+    <p class="state"><span class="dot s-${st}"></span>${STATUS[st]}${st==='approved'&&it.approvedAt?` <small>${it.approvedBy?'von '+esc(nameFor(it.approvedBy))+' ':''}am ${esc(new Date(it.approvedAt).toLocaleDateString('de-DE'))}</small>`:''}</p>
+    ${S.readonly?'':`<div class="actions" style="margin-bottom:20px">${btn('review','Zur Freigabe geben','ghost')}${btn('approved','Freigeben','ok')}${btn('changes','Anpassung anfordern','warnb')}${st!=='draft'?btn('draft','Zurück auf Entwurf','ghost'):''}</div>`}
+    <h3>Anmerkungen</h3>
+    <ul class="comments">${(it.comments||[]).map(c=>`<li><div class="cm">${c.by?esc(nameFor(c.by))+', ':''}${esc(new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}))}</div><p>${esc(c.text)}</p></li>`).join('')||'<li style="background:none;padding:0;color:var(--muted)">Noch keine Anmerkungen.</li>'}</ul>
+    ${S.readonly?'':`<div class="cform"><textarea id="cnew" rows="2" placeholder="Anmerkung oder Änderungswunsch">${esc(draft)}</textarea><button class="btn ghost" data-act="comment">Anmerkung senden</button></div>`}
+  </section>`;
+}
+function coll(){return S.openKind==='post'?'posts':'stories'}
+function setField(k,v){
+  const it=current();if(!it)return;it[k]=v;
+  if(k==='date'){it.month=v?v.slice(0,7):S.month}
+  save(coll(),it);
+  if(k==='date'&&it.month!==S.month){toast('Verschoben nach '+monthLabel(it.month)+'.');closeDrawer()}
+  else if(k==='format'||k==='date'||k==='time'||k==='pillar')buildDrawer();
+  render();
+}
+function addComment(text){
+  const it=current();if(!it||!text.trim())return;
+  it.comments=[...(it.comments||[]),{by:S.me||'',text:text.trim(),at:new Date().toISOString()}];
+}
+function setStatus(s){
+  const it=current();if(!it)return;const box=$('#cnew');
+  if(s==='changes'&&box&&!box.value.trim()){toast('Schreib kurz dazu, was angepasst werden soll.');box.focus();return}
+  if(box&&box.value.trim()){addComment(box.value);box.value=''}
+  it.status=s;
+  if(s==='approved'){it.approvedBy=S.me||'';it.approvedAt=new Date().toISOString()}else{delete it.approvedBy;delete it.approvedAt}
+  save(coll(),it);refreshLive();render();
+}
+
+/* ---------- Feed-Übersicht zerlegen ---------- */
+function openFeedModal(){
+  const m=$('#modal');
+  m.innerHTML=`<div class="scrim" data-act="mclose"></div><div class="mbox" role="dialog" aria-label="Feed-Übersicht hochladen">
+    <h2>Feed-Übersicht hochladen</h2>
+    <p>Ein Bild mit dem geplanten Raster, drei Kacheln pro Reihe, oben links der neueste Post. Das Tool schneidet daraus die einzelnen Kacheln und ordnet sie den Terminen zu.</p>
+    <label class="btn ghost" style="margin-bottom:14px">Bild auswählen<input type="file" accept="image/*" id="feedfile" hidden></label>
+    <div id="fstep" hidden>
+      <div class="prev"><img id="fimg" alt="Vorschau"><svg class="lines" id="flines" preserveAspectRatio="none"></svg></div>
+      <div class="row2"><label class="f">Kachelformat<select id="fratio">${Object.keys(RATIOS).map(r=>`<option value="${r}" ${r===S.settings.tileRatio?'selected':''}>${r.replace('/',':')}</option>`).join('')}</select></label>
+      <label class="f">Reihen<input type="number" id="frows" min="1" max="20"></label></div>
+      <p id="finfo"></p>
+      <div class="actions"><button class="btn" id="fgo">Kacheln übernehmen</button><button class="btn ghost" data-act="mclose">Abbrechen</button></div>
+    </div></div>`;
+  m.hidden=false;
+  let img=null;
+  const draw=()=>{if(!img)return;const rows=Math.max(1,+$('#frows').value||1);const sv=$('#flines');
+    sv.setAttribute('viewBox','0 0 300 '+(300*img.naturalHeight/img.naturalWidth));const h=300*img.naturalHeight/img.naturalWidth;
+    let l='';for(let c=1;c<3;c++)l+=`<line x1="${c*100}" y1="0" x2="${c*100}" y2="${h}" stroke="#fff" stroke-width="1.5"/>`;
+    for(let r=1;r<rows;r++)l+=`<line x1="0" y1="${r*h/rows}" x2="300" y2="${r*h/rows}" stroke="#fff" stroke-width="1.5"/>`;
+    sv.innerHTML=l;
+    const n=rows*3;const existing=S.posts.length;
+    $('#finfo').textContent=`Ergibt ${n} Kacheln. `+(existing?`${Math.min(existing,n)} davon landen auf bereits geplanten Posts${n>existing?', '+(n-existing)+' werden neu angelegt':''}.`:'Die Posts werden neu angelegt, mit Terminen aus eurem Rhythmus.');
+  };
+  const autoRows=()=>{if(!img)return;const tileH=(img.naturalWidth/3)*RATIOS[$('#fratio').value];$('#frows').value=Math.max(1,Math.round(img.naturalHeight/tileH));draw()};
+  $('#feedfile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{img=await loadImg(f);$('#fimg').src=img.src;$('#fstep').hidden=false;autoRows()}catch(err){toast(err.message)}};
+  $('#fratio').onchange=autoRows;$('#frows').oninput=draw;
+  $('#fgo').onclick=async()=>{
+    const btn=$('#fgo');btn.disabled=true;
+    const rows=Math.max(1,+$('#frows').value||1);const n=rows*3;const tw=img.naturalWidth/3,th=img.naturalHeight/rows;
+    const ratio=$('#fratio').value;if(ratio!==S.settings.tileRatio){S.settings.tileRatio=ratio;saveSettings()}
+    const list=gridOrder();
+    const used=new Set(S.posts.map(p=>p.date).filter(Boolean));
+    const free=plannedDates(S.month).filter(x=>!used.has(x.date)).reverse();
+    while(list.length<n){const d=free.shift();list.push(blankPost(d?d.date:'',d?d.time:''))}
+    for(let i=0;i<n;i++){
+      btn.textContent=`Kachel ${i+1} von ${n}…`;
+      const r=Math.floor(i/3),c=i%3;
+      const stored=await storeCanvas(cut(img,c*tw,r*th,tw,th,900));
+      const p=list[i];p.img=stored;await save('posts',p);
+    }
+    $('#modal').hidden=true;$('#modal').innerHTML='';toast(n+' Kacheln übernommen.');
+  };
+}
+
+/* ---------- Events ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button,[data-act]');if(!t)return;
+  if(t.dataset.tab){S.tab=t.dataset.tab;render();return}
+  if(t.dataset.open){openItem('post',t.dataset.open);return}
+  if(t.dataset.openstory){openItem('story',t.dataset.openstory);return}
+  if(t.dataset.filter){S.filter=S.filter===t.dataset.filter?'all':t.dataset.filter;render();return}
+  if(t.dataset.status){setStatus(t.dataset.status);return}
+  if(t.dataset.pcolor!==undefined){const p=S.settings.pillars[+t.dataset.pcolor];p.color=PCOLORS[(PCOLORS.indexOf(p.color)+1)%PCOLORS.length];saveSettings();renderPlan();return}
+  if(t.dataset.pdel!==undefined){const p=S.settings.pillars[+t.dataset.pdel];if(confirm('Säule „'+(p.name||'Ohne Namen')+'“ entfernen?')){S.settings.pillars.splice(+t.dataset.pdel,1);saveSettings();renderPlan()}return}
+  const a=t.dataset.act;if(!a)return;
+  const it=current();
+  switch(a){
+    case 'close':closeDrawer();break;
+    case 'mclose':$('#modal').hidden=true;$('#modal').innerHTML='';break;
+    case 'feedupload':openFeedModal();break;
+    case 'addpost':{const p=blankPost('','');S.posts.push(p);save('posts',p);openItem('post',p.id);render();break}
+    case 'addstory':{const s=blankStory(t.dataset.date||'');S.stories.push(s);save('stories',s);openItem('story',s.id);render();break}
+    case 'gen':{
+      const used=new Set(S.posts.map(p=>p.date).filter(Boolean));const pd=plannedDates(S.month).filter(x=>!used.has(x.date));
+      if(!Object.values(S.settings.days).some(d=>d&&d.on)){toast('Lege zuerst im Tab Planung die Posting-Tage fest.');break}
+      if(!pd.length){toast('Alle Termine aus dem Rhythmus sind schon angelegt.');break}
+      pd.forEach(x=>{const p=blankPost(x.date,x.time);S.posts.push(p);save('posts',p)});render();toast(pd.length+' Termine angelegt.');break}
+    case 'addpillar':S.settings.pillars.push({id:newId('c'),name:'',desc:'',color:PCOLORS[S.settings.pillars.length%PCOLORS.length]});saveSettings();renderPlan();break;
+    case 'addslide':if(it){it.slides=[...(it.slides&&it.slides.length?it.slides:['']),''];save('posts',it);buildDrawer()}break;
+    case 'rmslide':if(it){it.slides=(it.slides||[]).filter((_,i)=>i!==+t.dataset.i);save('posts',it);buildDrawer()}break;
+    case 'rmimg':if(it){removeFile(it.img);it.img='';save(coll(),it);buildDrawer();render()}break;
+    case 'comment':{const b=$('#cnew');if(b&&b.value.trim()&&it){addComment(b.value);b.value='';save(coll(),it);refreshLive()}break}
+    case 'delete':if(it&&confirm(S.openKind==='post'?'Diesen Post löschen?':'Diese Story löschen?')){const c=coll(),id=it.id;removeFile(it.img);S.posts=S.posts.filter(x=>x.id!==id);S.stories=S.stories.filter(x=>x.id!==id);closeDrawer();remove(c,id);render()}break;
+  }
+});
+$('#scrim').addEventListener('click',closeDrawer);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#modal').hidden){$('#modal').hidden=true;$('#modal').innerHTML=''}else if(S.openId)closeDrawer()}});
+$('#prevM').onclick=()=>shiftMonth(-1);$('#nextM').onclick=()=>shiftMonth(1);
+function shiftMonth(n){const [y,m]=S.month.split('-').map(Number);S.month=ym(new Date(y,m-1+n,1));S.filter='all';closeDrawer();S.posts=[];S.stories=[];S.monthDoc={};render();loadMonth()}
+
+const drawer=$('#drawer');
+drawer.addEventListener('change',async e=>{
+  const t=e.target;
+  if(t.dataset.file){const f=t.files[0];if(!f)return;const it=current();if(!it)return;
+    toast('Bild wird gespeichert…');
+    try{const old=it.img;const v=await fileToStored(f,1080);it.img=v;removeFile(old);save(coll(),it);buildDrawer();render();toast('Bild gespeichert.')}catch(err){toast(err.message||'Bild konnte nicht gespeichert werden.')}
+    return}
+  if(t.dataset.slide!==undefined){const it=current();const sl=[...(it.slides&&it.slides.length?it.slides:[''])];sl[+t.dataset.slide]=t.value;it.slides=sl;save('posts',it);return}
+  if(t.dataset.f){if(t.type==='radio'&&!t.checked)return;setField(t.dataset.f,t.value)}
+});
+drawer.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.f==='caption'){const c=$('#capc');c.textContent=t.value.length+' von 2.200 Zeichen';c.classList.toggle('over',t.value.length>2200)}
+  if(t.dataset.f==='hashtags'){const n=(t.value.match(/#[^\s#]+/g)||[]).length;const c=$('#tagc');c.textContent=n+' von maximal 5';c.classList.toggle('over',n>5)}
+});
+const plan=$('#p-plan');
+plan.addEventListener('change',e=>{
+  const t=e.target;const s=S.settings;
+  if(t.dataset.pf==='briefing'){S.monthDoc.briefing=t.value;saveMonth();return}
+  if(t.dataset.sf==='perWeek'){s.perWeek=t.value;saveSettings();return}
+  if(t.dataset.day!==undefined){const k=t.dataset.day;s.days[k]={...(s.days[k]||{}),on:t.checked};saveSettings();renderPlan();return}
+  if(t.dataset.daytime!==undefined){const k=t.dataset.daytime;s.days[k]={...(s.days[k]||{on:true}),time:t.value};saveSettings();return}
+  if(t.dataset.pname!==undefined){s.pillars[+t.dataset.pname].name=t.value;saveSettings();return}
+  if(t.dataset.pdesc!==undefined){s.pillars[+t.dataset.pdesc].desc=t.value;saveSettings();return}
+  if(t.dataset.ratio!==undefined){s.tileRatio=t.value;saveSettings();render();return}
+});
+
+/* ---------- Start ---------- */
+document.querySelectorAll('.cname').forEach(e=>e.textContent=CFG.client||'');
+if(CFG.client)document.title=CFG.client+' Redaktionsplan';
+function showLogin(){$('#app').hidden=true;$('#login').hidden=false;closeDrawer()}
+async function enter(user){
+  S.me=user.email||'';$('#login').hidden=true;$('#app').hidden=false;
+  await Promise.all([loadSettings(),loadMembers()]);render();await loadMonth();subscribeRealtime();
+}
+$('#lform').addEventListener('submit',async e=>{
+  e.preventDefault();const b=$('#lbtn'),er=$('#lerr');b.disabled=true;er.hidden=true;
+  const {data,error}=await S.sb.auth.signInWithPassword({email:$('#lmail').value.trim(),password:$('#lpw').value});
+  b.disabled=false;
+  if(error){er.textContent='E-Mail oder Passwort stimmen nicht.';er.hidden=false;return}
+  enter(data.user);
+});
+$('#logout').addEventListener('click',async()=>{await S.sb.auth.signOut();location.reload()});
+(async()=>{
+  if(!CFG.url||!CFG.key||!window.supabase){const f=$('#fatal');f.textContent='Die Verbindung zur Datenbank ist noch nicht eingerichtet. Bitte die Datei config.js ausfüllen.';f.hidden=false;return}
+  S.sb=window.supabase.createClient(CFG.url,CFG.key);
+  const {data}=await S.sb.auth.getSession();
+  if(data&&data.session)enter(data.session.user);else showLogin();
+  S.sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT')showLogin()});
+})();
+})();
+</script>
+</body>
+</html>
