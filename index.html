@@ -156,7 +156,8 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
 .scard .sm{font-size:13px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:6px}
 
 .modal{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px}
-.mbox{position:relative;background:var(--paper);border-radius:16px;padding:22px;width:min(520px,100%);max-height:90vh;overflow:auto;border:1px solid var(--line)}
+.modal .scrim{z-index:0}
+.mbox{z-index:1;position:relative;background:var(--paper);border-radius:16px;padding:22px;width:min(520px,100%);max-height:90vh;overflow:auto;border:1px solid var(--line)}
 .mbox h2{margin:0 0 6px;font-weight:300;font-size:24px}
 .mbox p{color:var(--muted);font-size:14px;margin:0 0 14px}
 .prev{position:relative;margin:0 0 14px;background:var(--wash);border-radius:8px;overflow:hidden}
