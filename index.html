@@ -172,6 +172,42 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
 .lbox .hint{color:var(--muted);font-size:14px;margin-top:18px}
 .fatal{max-width:560px;margin:80px auto;padding:0 20px;color:var(--muted)}
 #logout{margin-left:6px}
+.profil{max-width:780px}
+.profil .intro{color:var(--muted);margin:0 0 22px;max-width:640px}
+.psec{border:1px solid var(--line);border-radius:14px;padding:20px 22px 8px;margin-bottom:18px}
+.psec>header{display:flex;gap:14px;align-items:baseline}
+.pnum{font-size:30px;font-weight:300;color:var(--mint-deep);line-height:1}
+.psec h2{font-weight:300;font-size:24px;margin:0 0 14px}
+.psec h3{font-size:14px;font-weight:700;color:var(--muted);margin:14px 0 6px}
+.pview{margin:0 0 12px;white-space:pre-wrap}
+.pview.empty{color:var(--muted)}
+.plabel{font-size:13px;color:var(--muted);margin:0}
+.profil input,.profil textarea,.profil select{display:block;width:100%;margin-top:5px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--paper);color:var(--ink);font-size:15px}
+.adj{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.adj .rank{font-size:13px;color:var(--muted)}
+.adjview{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;padding:0;list-style:none}
+.adjview li{background:var(--wash);border-radius:999px;padding:5px 14px}
+.adjview li b{color:var(--mint-deep);margin-right:6px;font-weight:700}
+.nogorow{display:grid;grid-template-columns:1fr 1fr 30px;gap:8px;align-items:center;margin-bottom:8px}
+.fmtrow{display:grid;grid-template-columns:1fr 1.4fr 120px 30px;gap:8px;align-items:center;margin-bottom:8px}
+.nogorow input,.fmtrow input,.fmtrow select{margin:0}
+@media (max-width:640px){.fmtrow{grid-template-columns:1fr 30px}.fmtrow .fd,.fmtrow select{grid-column:1/2}.adj{grid-template-columns:1fr}}
+.taglist{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px}
+.taglist li{display:flex;gap:10px;align-items:baseline}
+.st{font-size:12px;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.st-keep{background:var(--mint);color:var(--ink)}.st-evolve{background:#F3E2C2;color:#5C3D0A}.st-kill{background:#F2D4DA;color:#6B1626}.st-test{background:var(--wash);color:var(--muted);border:1px solid var(--line)}
+.pnote{font-size:13px;color:var(--muted);border-left:3px solid var(--mint);padding-left:10px;margin:14px 0}
+.pfoot{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
+.pconf{display:flex;align-items:center;gap:8px;font-size:14px;margin:0 0 10px;flex-wrap:wrap}
+.pconf small{color:var(--bordeaux)}
+.mood{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:12px}
+.mood figure{margin:0;position:relative;aspect-ratio:4/5;background:var(--wash);border-radius:6px;overflow:hidden}
+.mood img{width:100%;height:100%;object-fit:cover}
+.mood .x{position:absolute;top:2px;right:4px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.nogobox{border:1px solid var(--bordeaux);color:var(--bordeaux);border-radius:10px;padding:10px 12px;font-size:14px;margin:0 0 16px}
+.brandline{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;color:var(--muted);background:var(--wash);border-radius:10px;padding:8px 12px;margin:0 0 18px}
+.brandline b{color:var(--ink);font-weight:700;margin-right:5px}
+.tile.nogo{outline:2px solid var(--bordeaux);outline-offset:-2px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -199,6 +235,7 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
     <button role="tab" data-tab="feed" aria-selected="true">Feed</button>
     <button role="tab" data-tab="stories" aria-selected="false">Stories</button>
     <button role="tab" data-tab="plan" aria-selected="false">Planung</button>
+    <button role="tab" data-tab="profil" aria-selected="false">Markenprofil</button>
     <button class="link" id="logout">Abmelden</button>
   </nav>
 </div></header>
@@ -211,6 +248,7 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
   <section id="p-feed"></section>
   <section id="p-stories" hidden></section>
   <section id="p-plan" hidden></section>
+  <section id="p-profil" hidden></section>
 </main>
 </div>
 
@@ -235,7 +273,7 @@ const now=new Date();
 const START='2026-10';
 const CFG=window.PLAN_CONFIG||{};
 const S={month:ym(now)<START?START:ym(now),tab:'feed',settings:{perWeek:'',days:{},pillars:[],tileRatio:'3/4'},monthDoc:{},
-  posts:[],stories:[],openKind:null,openId:null,filter:'all',sb:null,me:'',members:{},readonly:false};
+  posts:[],stories:[],openKind:null,openId:null,filter:'all',sb:null,me:'',members:{},roles:{},isOwner:false,profile:{},notes:{},profileMissing:false,readonly:false};
 const pend={};
 
 function ym(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
@@ -305,8 +343,30 @@ async function loadSettings(){
   if(data&&!(pend.settings>0)){const d=data.data||{};S.settings={perWeek:d.perWeek??'',days:d.days||{},pillars:d.pillars||[],tileRatio:d.tileRatio||'3/4'}}
 }
 async function loadMembers(){
-  const {data}=await S.sb.from('members').select('email,name');
-  S.members={};(data||[]).forEach(m=>{if(m.email)S.members[m.email.toLowerCase()]=m.name||m.email});
+  let r=await S.sb.from('members').select('email,name,role');
+  if(r.error)r=await S.sb.from('members').select('email,name');
+  S.members={};S.roles={};
+  (r.data||[]).forEach(m=>{if(m.email){const e=m.email.toLowerCase();S.members[e]=m.name||m.email;S.roles[e]=m.role||'team'}});
+  S.isOwner=S.roles[String(S.me).toLowerCase()]==='owner';
+}
+async function loadProfile(){
+  const [p,n]=await Promise.all([
+    S.sb.from('profile').select('data').eq('id','main').maybeSingle(),
+    S.sb.from('profile_notes').select('id,data')]);
+  if(p.error){S.profileMissing=true;console.warn(p.error);return}
+  S.profileMissing=false;
+  if(!(pend.profile>0))S.profile=p.data?structuredClone(p.data.data):{};
+  const nn={};(n.data||[]).forEach(r=>nn[r.id]=structuredClone(r.data));
+  Object.keys(S.notes).forEach(k=>{if(pend['n:'+k]>0)nn[k]=S.notes[k]});
+  S.notes=nn;
+}
+function saveProfile(){
+  const row={id:'main',data:JSON.parse(JSON.stringify(S.profile)),updated_at:new Date().toISOString()};
+  return enqueue('profile',async()=>{const {error}=await S.sb.from('profile').upsert(row);if(error)throw error});
+}
+function saveNote(k){
+  const row={id:k,data:JSON.parse(JSON.stringify(S.notes[k]||{})),updated_at:new Date().toISOString()};
+  return enqueue('n:'+k,async()=>{const {error}=await S.sb.from('profile_notes').upsert(row);if(error)throw error});
 }
 async function loadMonth(){
   const m=S.month;
@@ -323,7 +383,7 @@ async function loadMonth(){
 let rtT=null;
 function subscribeRealtime(){
   S.sb.channel('plan-changes').on('postgres_changes',{event:'*',schema:'public'},()=>{
-    clearTimeout(rtT);rtT=setTimeout(async()=>{await Promise.all([loadSettings(),loadMembers()]);await loadMonth()},500);
+    clearTimeout(rtT);rtT=setTimeout(async()=>{await Promise.all([loadSettings(),loadMembers(),loadProfile()]);await loadMonth();renderProfileSafe()},500);
   }).subscribe();
 }
 
@@ -334,9 +394,9 @@ function cut(img,sx,sy,sw,sh,maxW){
   c.width=Math.max(1,Math.round(sw*sc));c.height=Math.max(1,Math.round(sh*sc));
   c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);return c;
 }
-async function storeCanvas(c){
+async function storeCanvas(c,prefix){
   const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.86));
-  const path=S.month+'/'+newId('i')+'.jpg';
+  const path=(prefix||S.month)+'/'+newId('i')+'.jpg';
   const {error}=await S.sb.storage.from('tiles').upload(path,blob,{contentType:'image/jpeg'});
   if(error){console.error(error);throw new Error('Bild konnte nicht hochgeladen werden.')}
   return 'sb:'+path;
@@ -367,10 +427,11 @@ function render(){
   document.documentElement.style.setProperty('--tile',S.settings.tileRatio||'3/4');
   $('#monthTitle').textContent=monthLabel(S.month);
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===S.tab)));
-  ['feed','stories','plan'].forEach(t=>$('#p-'+t).hidden=t!==S.tab);
+  ['feed','stories','plan','profil'].forEach(t=>$('#p-'+t).hidden=t!==S.tab);
   if(S.tab==='feed')renderFeed();
   if(S.tab==='stories')renderStories();
   if(S.tab==='plan'&&!$('#p-plan').contains(document.activeElement))renderPlan();
+  if(S.tab==='profil')renderProfileSafe();
 }
 function renderFeed(){
   const list=gridOrder();const rep=repeats();
@@ -378,8 +439,8 @@ function renderFeed(){
   list.forEach(p=>counts[p.status||'draft']++);
   const tiles=list.map(p=>{
     const pl=pillar(p.pillar);const st=p.status||'draft';
-    const dim=S.filter!=='all'&&st!==S.filter;
-    return `<button class="tile${dim?' dim':''}" data-open="${p.id}" aria-label="${esc(fmtLong(p.date)+', '+FORMATS[p.format||'single']+', '+STATUS[st])}">
+    const dim=S.filter!=='all'&&st!==S.filter;const ng=nogoHits(itemTexts(p)).length>0;
+    return `<button class="tile${dim?' dim':''}${ng?' nogo':''}" data-open="${p.id}" aria-label="${esc(fmtLong(p.date)+', '+FORMATS[p.format||'single']+', '+STATUS[st])}">
       ${p.img?imgTag(p.img,''):`<span class="tph"><strong>${esc(pl?pl.name:FORMATS[p.format||'single'])}</strong>Kachel fehlt noch</span>`}
       ${pl?`<span class="tbar" style="background:${esc(pl.color)}"></span>`:''}
       ${ICON[p.format]||''}
@@ -401,6 +462,7 @@ function renderFeed(){
         ${S.settings.pillars.length?`<ul class="legend">${S.settings.pillars.map(p=>`<li><span class="sw" style="background:${esc(p.color)}"></span>${esc(p.name||'Ohne Namen')}<span class="n">${pc[p.id]||0}</span></li>`).join('')}</ul>`:'<p class="rhythm" style="color:var(--muted)">Noch keine Säulen angelegt.</p>'}
         ${rep.size?`<p class="warn">${rep.size===1?'Einmal folgt':rep.size+' Mal folgt'} dieselbe Säule direkt aufeinander. Markiert mit dem roten Punkt.</p>`:''}
       </section>
+      ${sideProfile(list)}
       <section><h2>Rhythmus</h2><p class="rhythm">${S.settings.perWeek?esc(S.settings.perWeek)+' Posts pro Woche':'Frequenz noch offen'}${days.length?'<br>'+esc(days.join(', ')):''}</p></section>
       <section class="actions" ${S.readonly?'hidden':''}>
         <button class="btn" data-act="feedupload">Feed-Übersicht hochladen</button>
@@ -450,6 +512,111 @@ function renderPlan(){
   </div>`;
 }
 
+/* ---------- Markenprofil ---------- */
+const FSTATUS={keep:'Keep',evolve:'Evolve',test:'Test',kill:'Kill'};
+function getPath(o,path){return path.split('.').reduce((a,k)=>a==null?undefined:a[k],o)}
+function setPath(o,path,v){const ks=path.split('.');let a=o;ks.slice(0,-1).forEach((k,i)=>{if(a[k]==null||typeof a[k]!=='object')a[k]=/^\d+$/.test(ks[i+1])?[]:{};a=a[k]});a[ks[ks.length-1]]=v}
+function nogoList(){return ((S.profile.sprache||{}).nogos||[]).filter(n=>n&&n.word&&n.word.trim())}
+function reFor(w){const t=w.trim();const e=t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return t.length<=3?new RegExp('(^|[^\\p{L}])'+e+'(?![\\p{L}])','iu'):new RegExp(e,'iu')}
+function nogoHits(texts){const out=[];nogoList().forEach(n=>{let r;try{r=reFor(n.word)}catch(e){return}if(texts.some(t=>t&&r.test(t)))out.push(n)});return out}
+function itemTexts(it){return [it.caption,it.hashtags,it.story,it.hook,it.reelFlow,it.audio,it.overlay,it.linkLabel,it.notes,...(it.slides||[])]}
+function updateNogo(){
+  const box=$('#nogo');if(!box)return;
+  const texts=[...$('#drawer').querySelectorAll('textarea,input:not([type]),input[type=text]')].filter(e=>e.id!=='cnew').map(e=>e.value);
+  const h=nogoHits(texts);
+  box.innerHTML=h.length?`<div class="nogobox" role="alert">Steht auf der No-Go-Liste: ${h.map(n=>`<strong>${esc(n.word)}</strong>${n.alt?' (besser: '+esc(n.alt)+')':''}`).join(', ')}</div>`:'';
+}
+function brandLine(){
+  const P=S.profile||{};const f=(P.funktion||{}).main;const adj=((P.gefuehl||{}).adj||[]).filter(Boolean);const r=(P.rolle||{}).name;
+  if(!f&&!adj.length&&!r)return '';
+  return `<div class="brandline">${f?`<span><b>Funktion</b>${esc(f)}</span>`:''}${adj.length?`<span><b>Gefühl</b>${esc(adj.join(', '))}</span>`:''}${r?`<span><b>Rolle</b>${esc(r)}</span>`:''}</div>`;
+}
+function formats(){return ((S.profile.formate||{}).items||[]).filter(f=>f&&f.name)}
+function formatSelect(p){
+  const fs=formats();if(!fs.length)return '';
+  return `<label class="f">Wiederkehrendes Format<select data-f="series"><option value="">Keins</option>${fs.map(f=>`<option value="${esc(f.id)}" ${f.id===p.series?'selected':''}>${esc(f.name)}${f.status==='kill'?' (Kill)':''}</option>`).join('')}</select></label>`;
+}
+function sideProfile(list){
+  const fs=formats();const cnt={};list.forEach(p=>{if(p.series)cnt[p.series]=(cnt[p.series]||0)+1});
+  const ngPosts=list.filter(p=>nogoHits(itemTexts(p)).length).length+S.stories.filter(x=>nogoHits(itemTexts(x)).length).length;
+  let h='';
+  if(fs.length)h+=`<section><h2>Formate im Monat</h2><ul class="legend">${fs.filter(f=>f.status!=='kill'||cnt[f.id]).map(f=>`<li><span class="st st-${esc(f.status||'test')}">${FSTATUS[f.status]||'Test'}</span>${esc(f.name)}<span class="n">${cnt[f.id]||0}</span></li>`).join('')}</ul></section>`;
+  if(ngPosts)h+=`<section><p class="warn" style="margin:0">${ngPosts===1?'Ein Beitrag enthält':ngPosts+' Beiträge enthalten'} ein No-Go-Wort. Im Raster rot umrandet.</p></section>`;
+  return h;
+}
+function renderProfileSafe(){if(S.tab==='profil'&&!$('#p-profil').contains(document.activeElement))renderProfile()}
+function pv(path,label,multi,ph){
+  const v=getPath(S.profile,path)||'';
+  if(S.isOwner)return `<label class="f">${label}${multi?`<textarea rows="3" data-pp="${path}" placeholder="${esc(ph||'')}">${esc(v)}</textarea>`:`<input data-pp="${path}" value="${esc(v)}" placeholder="${esc(ph||'')}">`}</label>`;
+  return `<p class="plabel">${label}</p><p class="pview${v?'':' empty'}">${v?esc(v):'Noch offen'}</p>`;
+}
+function notesHtml(k){
+  const n=S.notes[k]||{};const meta=(S.profile.meta||{})[k];
+  const changed=n.confirmed&&meta&&meta>n.confirmed.at;
+  return `<footer class="pfoot">
+    <p class="pconf">${n.confirmed?`<span class="dot s-approved"></span>Bestätigt von ${esc(nameFor(n.confirmed.by))} am ${esc(new Date(n.confirmed.at).toLocaleDateString('de-DE'))}${changed?' <small>Seitdem geändert</small>':''}`:'<span class="dot s-review"></span>Noch nicht bestätigt'}</p>
+    ${S.isOwner?'':`<p><button class="btn ${n.confirmed&&!changed?'ghost':'ok'}" data-conf="${k}">${n.confirmed&&!changed?'Bestätigung zurücknehmen':'Bestätigen'}</button></p>`}
+    <ul class="comments">${(n.comments||[]).map(c=>`<li><div class="cm">${esc(nameFor(c.by))}, ${esc(new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}))}</div><p>${esc(c.text)}</p></li>`).join('')}</ul>
+    <div class="cform"><textarea rows="2" data-pc="${k}" placeholder="Anmerkung zu diesem Punkt"></textarea><button class="btn ghost" data-pcsend="${k}">Anmerkung senden</button></div>
+  </footer>`;
+}
+function renderProfile(){
+  const el=$('#p-profil');
+  if(S.profileMissing){el.innerHTML='<div class="empty">Das Markenprofil ist in der Datenbank noch nicht eingerichtet.</div>';return}
+  const P=S.profile;const own=S.isOwner;const stand=P.stand||'';
+  const strat=`<p class="pnote">Stand ${esc(stand||'offen')}. Weiterentwicklung im Strategietermin.</p>`;
+  const sec=(k,n,title,body,strategic)=>`<article class="psec"><header><span class="pnum">${n}</span><h2>${title}</h2></header>${body}${strategic?strat:''}${notesHtml(k)}</article>`;
+  const adj=(P.gefuehl||{}).adj||[];
+  const gef=own?`<div class="adj">${[0,1,2].map(i=>`<label class="f"><span class="rank">Platz ${i+1}</span><input data-pp="gefuehl.adj.${i}" value="${esc(adj[i]||'')}"></label>`).join('')}</div>`
+    :(adj.filter(Boolean).length?`<ol class="adjview">${adj.map((a,i)=>a?`<li><b>${i+1}</b>${esc(a)}</li>`:'').join('')}</ol>`:'<p class="pview empty">Noch offen</p>');
+  const pil=S.settings.pillars.length?`<ul class="legend" style="margin-bottom:12px">${S.settings.pillars.map(p=>`<li><span class="sw" style="background:${esc(p.color)}"></span>${esc(p.name||'Ohne Namen')}${p.desc?` <span style="color:var(--muted)">${esc(p.desc)}</span>`:''}</li>`).join('')}</ul>`:'<p class="pview empty">Noch keine Säulen angelegt.</p>';
+  const ng=((P.sprache||{}).nogos||[]);
+  const nogos=own?`${ng.map((n,i)=>`<div class="nogorow"><input data-pp="sprache.nogos.${i}.word" value="${esc(n.word||'')}" placeholder="Wort" aria-label="No-Go-Wort"><input data-pp="sprache.nogos.${i}.alt" value="${esc(n.alt||'')}" placeholder="Stattdessen" aria-label="Alternative"><button class="x" data-nogodel="${i}" aria-label="Entfernen">×</button></div>`).join('')}<p><button class="btn ghost" data-act="addnogo">No-Go-Wort hinzufügen</button></p>`
+    :(ng.filter(n=>n.word).length?`<ul class="taglist">${ng.filter(n=>n.word).map(n=>`<li><strong>${esc(n.word)}</strong>${n.alt?`<span style="color:var(--muted)">stattdessen ${esc(n.alt)}</span>`:''}</li>`).join('')}</ul>`:'<p class="pview empty">Noch keine No-Go-Wörter.</p>');
+  const imgs=((P.visuell||{}).images||[]);
+  const mood=`<div class="mood">${imgs.map((v,i)=>`<figure>${imgTag(v,'Referenzbild')}${own?`<button class="x" data-moodel="${i}" aria-label="Bild entfernen">×</button>`:''}</figure>`).join('')}</div>${own?'<p><label class="btn ghost">Referenzbild hochladen<input type="file" accept="image/*" data-mood hidden></label></p>':''}`;
+  const fi=((P.formate||{}).items||[]);
+  const fmts=own?`${fi.map((f,i)=>`<div class="fmtrow"><input data-pp="formate.items.${i}.name" value="${esc(f.name||'')}" placeholder="Format" aria-label="Format"><input class="fd" data-pp="formate.items.${i}.desc" value="${esc(f.desc||'')}" placeholder="Worum es geht" aria-label="Beschreibung"><select data-pp="formate.items.${i}.status" aria-label="Status">${Object.entries(FSTATUS).map(([k,v])=>`<option value="${k}" ${f.status===k?'selected':''}>${v}</option>`).join('')}</select><button class="x" data-fmtdel="${i}" aria-label="Entfernen">×</button></div>`).join('')}<p><button class="btn ghost" data-act="addformat">Format hinzufügen</button></p>${pv('formate.reviewed','Zuletzt bewertet',false,'z. B. Oktober 2026')}`
+    :(fi.filter(f=>f.name).length?`<ul class="taglist">${fi.filter(f=>f.name).map(f=>`<li><span class="st st-${esc(f.status||'test')}">${FSTATUS[f.status]||'Test'}</span><span><strong>${esc(f.name)}</strong>${f.desc?` <span style="color:var(--muted)">${esc(f.desc)}</span>`:''}</span></li>`).join('')}</ul>`:'<p class="pview empty">Noch keine Formate.</p>')+(P.formate&&P.formate.reviewed?`<p class="plabel">Zuletzt bewertet: ${esc(P.formate.reviewed)}</p>`:'');
+  el.innerHTML=`<div class="profil">
+    <p class="intro">Die Grundlage für alle Inhalte auf dem Kanal. Jeder Punkt lässt sich einzeln bestätigen oder kommentieren.</p>
+    ${own?`<div style="max-width:260px">${pv('stand','Stand des Profils',false,'z. B. Oktober 2026')}</div>`:''}
+    ${sec('funktion',1,'Funktion des Accounts',pv('funktion.main','Hauptfunktion')+pv('funktion.others','Weitere Funktionen')+pv('funktion.text','Was das für die Inhalte heißt',true),true)}
+    ${sec('gefuehl',2,'Wie sich der Account anfühlt',`<p class="plabel">Drei Eigenschaften in Rangfolge</p>`+gef+pv('gefuehl.text','Erläuterung',true),false)}
+    ${sec('rolle',3,'Rolle des Absenders',pv('rolle.name','Rolle')+pv('rolle.text','Was das bedeutet',true),true)}
+    ${sec('themen',4,'Perspektiven und Themen',`<p class="plabel">Content-Säulen${own?' (Pflege im Tab Planung)':''}</p>`+pil+pv('themen.text','Perspektiven und Leitplanken',true),true)}
+    ${sec('sprache',5,'Sprache und Formulierungen',pv('sprache.text','Regeln für Texte',true)+'<h3>No-Go-Wörter</h3>'+nogos,false)}
+    ${sec('visuell',6,'Visuelle und audiovisuelle Inhalte',pv('visuell.text','Regeln für Bild, Video und Ton',true)+'<h3>Referenzbilder</h3>'+mood,false)}
+    ${sec('formate',7,'Wiederkehrende Formate',`<p class="plabel" style="margin-bottom:10px">Keep, Kill, Evolve oder Test</p>`+fmts,true)}
+  </div>`;
+}
+function touchSection(path){
+  const k=path.split('.')[0];const map={funktion:1,gefuehl:1,rolle:1,themen:1,sprache:1,visuell:1,formate:1};
+  if(map[k]){S.profile.meta=S.profile.meta||{};S.profile.meta[k]=new Date().toISOString()}
+}
+const prof=$('#p-profil');
+prof.addEventListener('change',async e=>{
+  const t=e.target;
+  if(t.dataset.pp!==undefined&&S.isOwner){setPath(S.profile,t.dataset.pp,t.value);touchSection(t.dataset.pp);saveProfile();return}
+  if(t.dataset.mood!==undefined&&S.isOwner){const f=t.files[0];if(!f)return;toast('Bild wird gespeichert…');
+    try{const img=await loadImg(f);const v=await storeCanvas(cut(img,0,0,img.naturalWidth,img.naturalHeight,900),'profil');
+      S.profile.visuell=S.profile.visuell||{};S.profile.visuell.images=[...(S.profile.visuell.images||[]),v];touchSection('visuell');saveProfile();renderProfile();toast('Bild gespeichert.')}
+    catch(err){toast(err.message||'Bild konnte nicht gespeichert werden.')}}
+});
+prof.addEventListener('click',e=>{
+  const t=e.target.closest('button');if(!t)return;const P=S.profile;
+  if(t.dataset.conf){const k=t.dataset.conf;const n=S.notes[k]=S.notes[k]||{};const meta=(P.meta||{})[k];const changed=n.confirmed&&meta&&meta>n.confirmed.at;
+    n.confirmed=(n.confirmed&&!changed)?null:{by:S.me,at:new Date().toISOString()};saveNote(k);renderProfile();return}
+  if(t.dataset.pcsend){const k=t.dataset.pcsend;const ta=prof.querySelector(`textarea[data-pc="${k}"]`);if(!ta||!ta.value.trim())return;
+    const n=S.notes[k]=S.notes[k]||{};n.comments=[...(n.comments||[]),{by:S.me,text:ta.value.trim(),at:new Date().toISOString()}];saveNote(k);renderProfile();return}
+  if(!S.isOwner)return;
+  if(t.dataset.act==='addnogo'){P.sprache=P.sprache||{};P.sprache.nogos=[...(P.sprache.nogos||[]),{word:'',alt:''}];saveProfile();renderProfile();return}
+  if(t.dataset.nogodel!==undefined){P.sprache.nogos.splice(+t.dataset.nogodel,1);touchSection('sprache');saveProfile();renderProfile();return}
+  if(t.dataset.act==='addformat'){P.formate=P.formate||{};P.formate.items=[...(P.formate.items||[]),{id:newId('f'),name:'',desc:'',status:'test'}];saveProfile();renderProfile();return}
+  if(t.dataset.fmtdel!==undefined){const f=P.formate.items[+t.dataset.fmtdel];if(confirm('Format „'+(f.name||'ohne Namen')+'“ entfernen?')){P.formate.items.splice(+t.dataset.fmtdel,1);touchSection('formate');saveProfile();renderProfile()}return}
+  if(t.dataset.moodel!==undefined){const v=P.visuell.images[+t.dataset.moodel];P.visuell.images.splice(+t.dataset.moodel,1);removeFile(v);touchSection('visuell');saveProfile();renderProfile();return}
+});
+
 /* ---------- Drawer ---------- */
 function current(){return (S.openKind==='post'?S.posts:S.stories).find(x=>x.id===S.openId)}
 function openItem(kind,id){S.openKind=kind;S.openId=id;buildDrawer()}
@@ -457,7 +624,7 @@ function closeDrawer(){S.openId=null;S.openKind=null;$('#drawer').hidden=true;$(
 function buildDrawer(){
   const it=current();if(!it){closeDrawer();return}
   const d=$('#drawer');d.innerHTML=S.openKind==='post'?postForm(it):storyForm(it);
-  d.hidden=false;$('#scrim').hidden=false;refreshLive();
+  d.hidden=false;$('#scrim').hidden=false;refreshLive();updateNogo();
   if(S.readonly)d.querySelectorAll('input,select,textarea,.dbody button:not([data-act=close])').forEach(e=>e.disabled=true);
 }
 function postForm(p){
@@ -476,11 +643,13 @@ function postForm(p){
   }
   return `<div class="dh"><div><p>${esc(fmtLong(p.date))}${p.time?', '+esc(p.time)+' Uhr':''}</p><h2>${esc(FORMATS[f])}${pl?' für '+esc(pl.name):''}</h2></div><button class="round" data-act="close" aria-label="Schließen">×</button></div>
   <div class="dbody">
+    ${brandLine()}<div id="nogo"></div>
     <div class="imgrow"><div class="thumb">${p.img?imgTag(p.img,'Kachel'):'Noch keine Kachel'}</div>
       <div class="imgacts"><label class="btn ghost">${p.img?'Kachel ersetzen':'Kachel hochladen'}<input type="file" accept="image/*" data-file="img" hidden></label>${p.img?'<button class="link" data-act="rmimg">Kachel entfernen</button>':''}</div></div>
     <div class="row2"><label class="f">Datum<input type="date" data-f="date" value="${esc(p.date)}"></label><label class="f">Uhrzeit<input type="time" data-f="time" value="${esc(p.time)}"></label></div>
     <fieldset class="seg"><legend>Format</legend><div class="segs">${Object.entries(FORMATS).map(([k,v])=>`<label><input type="radio" name="fmt" value="${k}" data-f="format" ${f===k?'checked':''}>${v}</label>`).join('')}</div></fieldset>
     <label class="f">Content-Säule<select data-f="pillar"><option value="">Noch offen</option>${S.settings.pillars.map(x=>`<option value="${esc(x.id)}" ${x.id===p.pillar?'selected':''}>${esc(x.name||'Ohne Namen')}</option>`).join('')}</select></label>
+    ${formatSelect(p)}
     <label class="f">Was hinter der Kachel steckt<textarea rows="3" data-f="story" placeholder="Welche Geschichte erzählt dieser Post?">${esc(p.story)}</textarea></label>
     ${fmt}
     <label class="f">Caption<textarea rows="7" data-f="caption">${esc(p.caption)}</textarea><span class="count${capLen>2200?' over':''}" id="capc">${capLen} von 2.200 Zeichen</span></label>
@@ -494,6 +663,7 @@ function storyForm(s){
   const posts=gridOrder();
   return `<div class="dh"><div><p>${esc(fmtLong(s.date))}</p><h2>Story: ${esc(s.format||'')}</h2></div><button class="round" data-act="close" aria-label="Schließen">×</button></div>
   <div class="dbody">
+    ${brandLine()}<div id="nogo"></div>
     <div class="imgrow"><div class="thumb story">${s.img?imgTag(s.img,'Story'):'Noch kein Bild'}</div>
       <div class="imgacts"><label class="btn ghost">${s.img?'Bild ersetzen':'Bild hochladen'}<input type="file" accept="image/*" data-file="img" hidden></label>${s.img?'<button class="link" data-act="rmimg">Bild entfernen</button>':''}</div></div>
     <div class="row2"><label class="f">Datum<input type="date" data-f="date" value="${esc(s.date)}"></label>
@@ -634,6 +804,7 @@ drawer.addEventListener('change',async e=>{
 });
 drawer.addEventListener('input',e=>{
   const t=e.target;
+  if(t.id!=='cnew')updateNogo();
   if(t.dataset.f==='caption'){const c=$('#capc');c.textContent=t.value.length+' von 2.200 Zeichen';c.classList.toggle('over',t.value.length>2200)}
   if(t.dataset.f==='hashtags'){const n=(t.value.match(/#[^\s#]+/g)||[]).length;const c=$('#tagc');c.textContent=n+' von maximal 5';c.classList.toggle('over',n>5)}
 });
@@ -655,7 +826,7 @@ if(CFG.client)document.title=CFG.client+' Redaktionsplan';
 function showLogin(){$('#app').hidden=true;$('#login').hidden=false;closeDrawer()}
 async function enter(user){
   S.me=user.email||'';$('#login').hidden=true;$('#app').hidden=false;
-  await Promise.all([loadSettings(),loadMembers()]);render();await loadMonth();subscribeRealtime();
+  await Promise.all([loadSettings(),loadMembers(),loadProfile()]);render();await loadMonth();subscribeRealtime();
 }
 $('#lform').addEventListener('submit',async e=>{
   e.preventDefault();const b=$('#lbtn'),er=$('#lerr');b.disabled=true;er.hidden=true;
