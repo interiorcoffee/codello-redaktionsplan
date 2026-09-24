@@ -55,13 +55,34 @@ main{max-width:1140px;margin:0 auto;padding:28px 20px 80px}
 .tile{position:relative;aspect-ratio:var(--tile);background:var(--wash);border:0;padding:0;margin:0;cursor:pointer;overflow:hidden;display:block;width:100%;transition:opacity .2s}
 .tile img{width:100%;height:100%;object-fit:cover;display:block}
 .tile.dim{opacity:.25}
-.tbar{position:absolute;left:0;top:0;bottom:0;width:5px}
+.tile::after{content:'';position:absolute;inset:0;pointer-events:none}
+.tile.t-changes::after{box-shadow:inset 0 0 0 3px var(--bordeaux)}
+.tile.t-review::after{box-shadow:inset 0 0 0 2px var(--amber)}
+.tile.t-draft::after{inset:5px;border:1.5px dashed rgba(255,255,255,.9);border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+.tile.t-draft img{opacity:.55}
+.tbadge{position:absolute;top:7px;left:7px;font-size:12px;line-height:1;border-radius:999px;padding:5px 9px;display:inline-flex;align-items:center;gap:5px}
+.b-changes{background:var(--bordeaux);color:#fff}
+.b-review{background:#FFF4E0;color:#6B4208}
+.b-ok{background:rgba(255,255,255,.93);color:#2F6B55;padding:4px;border-radius:50%}
+.tbadge svg,.tpill svg{width:13px;height:13px;flex:none}
+.b-ok svg{width:14px;height:14px}
+.tbr{position:absolute;right:7px;bottom:8px;display:flex;gap:4px;align-items:center}
+.tpill{background:rgba(255,255,255,.93);color:#1E2623;font-size:12px;border-radius:999px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px}
+.tpill.ng{color:#8A2335}
+.tmeta .tpil{padding-left:6px;border-left:1px solid #C9D3CE;color:#5F6C66}
+.tmeta .tpil.rep{color:#8A2335}
+.pbar{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;margin:0 0 12px;background:var(--wash)}
+.pbar span{display:block;height:100%}
+.stext{font-size:13px;color:var(--muted)}
+.stext.st-changes{color:var(--bordeaux)}.stext.st-review{color:var(--amber)}
+.state.st-changes{color:var(--bordeaux)}.state.st-review{color:var(--amber)}
+.ccount{display:inline-flex;align-items:center;gap:3px;margin-left:auto}
 .ticon{position:absolute;top:7px;right:7px;width:20px;height:20px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
 .tph{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:10px;color:var(--muted);font-size:13px;line-height:1.3}
 .tph strong{color:var(--ink);font-weight:400;font-size:14px}
 .tmeta{position:absolute;left:8px;bottom:8px;background:rgba(255,255,255,.93);color:#1E2623;font-size:12px;border-radius:999px;padding:2px 9px 2px 7px;display:flex;align-items:center;gap:6px}
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
-.s-draft{background:#A7B2AD}.s-review{background:var(--amber)}.s-changes{background:var(--bordeaux)}.s-approved{background:var(--mint-deep)}
+.s-draft{background:none;border:1.5px dashed var(--muted)}.s-review{background:var(--amber)}.s-changes{background:var(--bordeaux)}.s-approved{background:var(--mint-deep)}
 .tflag{position:absolute;top:7px;left:12px;width:12px;height:12px;border-radius:50%;border:2px solid #fff;background:var(--bordeaux);box-shadow:0 0 0 1px rgba(0,0,0,.2)}
 .empty{grid-column:1/-1;border:1px dashed var(--line);border-radius:12px;padding:34px 22px;text-align:center;color:var(--muted)}
 
@@ -153,7 +174,7 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
 .scard .sthumb{aspect-ratio:9/16;background:var(--wash);border-radius:10px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;color:var(--ink);font-size:14px;line-height:1.3}
 .scard .sthumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .scard .sthumb .ov{position:relative;background:rgba(255,255,255,.9);color:#1E2623;border-radius:6px;padding:4px 7px;font-size:13px}
-.scard .sm{font-size:13px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:6px}
+.scard .sm{font-size:13px;width:100%;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:6px}
 
 .modal{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px}
 .modal .scrim{z-index:0}
@@ -207,7 +228,6 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
 .nogobox{border:1px solid var(--bordeaux);color:var(--bordeaux);border-radius:10px;padding:10px 12px;font-size:14px;margin:0 0 16px}
 .brandline{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;color:var(--muted);background:var(--wash);border-radius:10px;padding:8px 12px;margin:0 0 18px}
 .brandline b{color:var(--ink);font-weight:700;margin-right:5px}
-.tile.nogo{outline:2px solid var(--bordeaux);outline-offset:-2px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -266,7 +286,20 @@ const MONTHS=['Januar','Februar','März','April','Mai','Juni','Juli','August','S
 const FORMATS={single:'Einzelbild',carousel:'Karussell',reel:'Reel'};
 const STATUS={draft:'Entwurf',review:'Zur Freigabe',changes:'Anpassung nötig',approved:'Freigegeben'};
 const STORY_FORMATS=['Bild mit Overlay','Video','Link-Sticker','Umfrage','Quiz','Countdown','Frage-Sticker','Produkt-Sticker','Reshare'];
-const PCOLORS=['#2F6B55','#8A2335','#C98B2B','#4A6FA5','#B5688A','#6E7D3A','#7A5C99','#3A8C8C'];
+const PCOLORS=['#4A6FA5','#7A5C99','#3A8C8C','#B5688A','#6E7D3A','#8C7B6A','#2E4A6B','#A08A4F'];
+const PILLAR_DRAFT=[
+  {name:'Styling',desc:'Sie lernt etwas: Bindetechniken, Ein Outfit viele Tücher, Get the Look'},
+  {name:'Print',desc:'Sie verliebt sich in ein Motiv: neue Prints, Kapseln, Details, Material'},
+  {name:'Anlass',desc:'Sie sieht sich in einer Situation: Tracht, Reisen, Office, Beach'},
+  {name:'CODELLO',desc:'Sie lernt die Marke kennen: Kooperationen, Gewinnspiele, Presse, Einblicke'}];
+const SVG_MSG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>';
+const SVG_OK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+function statusBadge(st,n){
+  if(st==='changes')return `<span class="tbadge b-changes">${SVG_MSG}Anpassung${n?' '+n:''}</span>`;
+  if(st==='review')return '<span class="tbadge b-review">Zur Freigabe</span>';
+  if(st==='approved')return `<span class="tbadge b-ok" title="Freigegeben">${SVG_OK}</span>`;
+  return '';
+}
 const RATIOS={'3/4':4/3,'4/5':5/4,'1/1':1};
 
 const now=new Date();
@@ -440,12 +473,13 @@ function renderFeed(){
   const tiles=list.map(p=>{
     const pl=pillar(p.pillar);const st=p.status||'draft';
     const dim=S.filter!=='all'&&st!==S.filter;const ng=nogoHits(itemTexts(p)).length>0;
-    return `<button class="tile${dim?' dim':''}${ng?' nogo':''}" data-open="${p.id}" aria-label="${esc(fmtLong(p.date)+', '+FORMATS[p.format||'single']+', '+STATUS[st])}">
-      ${p.img?imgTag(p.img,''):`<span class="tph"><strong>${esc(pl?pl.name:FORMATS[p.format||'single'])}</strong>Kachel fehlt noch</span>`}
-      ${pl?`<span class="tbar" style="background:${esc(pl.color)}"></span>`:''}
+    const nc=(p.comments||[]).length;const rp=rep.has(p.id);
+    return `<button class="tile t-${st}${dim?' dim':''}" data-open="${p.id}" aria-label="${esc(fmtLong(p.date)+', '+FORMATS[p.format||'single']+', '+STATUS[st]+(pl?', '+pl.name:'')+(nc?', '+nc+' Anmerkungen':''))}">
+      ${p.img?imgTag(p.img,''):`<span class="tph"><strong>${esc(FORMATS[p.format||'single'])}</strong>Kachel fehlt noch</span>`}
       ${ICON[p.format]||''}
-      ${rep.has(p.id)?'<span class="tflag" title="Gleiche Content-Säule wie der Post davor"></span>':''}
-      <span class="tmeta"><span class="dot s-${st}"></span>${esc(fmtShort(p.date))}${p.time?' '+esc(p.time):''}</span>
+      ${statusBadge(st,nc)}
+      <span class="tmeta">${esc(fmtShort(p.date))}${p.time?' '+esc(p.time):''}${pl?`<span class="tpil${rp?' rep':''}"${rp?' title="Gleiche Content-Säule wie der Post davor"':''}>${esc(pl.name||'Ohne Namen')}</span>`:''}</span>
+      ${(ng||(nc&&st!=='changes'))?`<span class="tbr">${ng?'<span class="tpill ng">No-Go</span>':''}${nc&&st!=='changes'?`<span class="tpill">${SVG_MSG}${nc}</span>`:''}</span>`:''}
     </button>`}).join('');
   const pc={};list.forEach(p=>{if(p.pillar)pc[p.pillar]=(pc[p.pillar]||0)+1});
   const days=WD_ORDER.filter(d=>S.settings.days[String(d)]?.on).map(d=>WD_LONG[d]+(S.settings.days[String(d)].time?' '+S.settings.days[String(d)].time+' Uhr':''));
@@ -459,8 +493,9 @@ function renderFeed(){
         ${['all','draft','review','changes','approved'].map(k=>`<button class="chip" data-filter="${k}" aria-pressed="${S.filter===k}">${k==='all'?'':`<span class="dot s-${k}"></span>`}${k==='all'?'Alle':STATUS[k]} ${counts[k]}</button>`).join('')}
       </div></section>
       <section><h2>Content-Säulen</h2>
+        ${S.settings.pillars.length&&Object.keys(pc).length?`<div class="pbar" aria-hidden="true">${S.settings.pillars.filter(p=>pc[p.id]).map(p=>`<span style="flex:${pc[p.id]};background:${esc(p.color)}"></span>`).join('')}</div>`:''}
         ${S.settings.pillars.length?`<ul class="legend">${S.settings.pillars.map(p=>`<li><span class="sw" style="background:${esc(p.color)}"></span>${esc(p.name||'Ohne Namen')}<span class="n">${pc[p.id]||0}</span></li>`).join('')}</ul>`:'<p class="rhythm" style="color:var(--muted)">Noch keine Säulen angelegt.</p>'}
-        ${rep.size?`<p class="warn">${rep.size===1?'Einmal folgt':rep.size+' Mal folgt'} dieselbe Säule direkt aufeinander. Markiert mit dem roten Punkt.</p>`:''}
+        ${rep.size?`<p class="warn">${rep.size===1?'Einmal folgt':rep.size+' Mal folgt'} dieselbe Säule direkt aufeinander. Der Säulenname auf der Kachel ist dann rot.</p>`:''}
       </section>
       ${sideProfile(list)}
       <section><h2>Rhythmus</h2><p class="rhythm">${S.settings.perWeek?esc(S.settings.perWeek)+' Posts pro Woche':'Frequenz noch offen'}${days.length?'<br>'+esc(days.join(', ')):''}</p></section>
@@ -477,7 +512,8 @@ function renderStories(){
   const html=keys.map(k=>`<div class="storyday"><h2>${esc(fmtLong(k))}${S.readonly?'':` <button class="link" data-act="addstory" data-date="${esc(k)}">Weitere Story an diesem Tag</button>`}</h2><div class="srow">
     ${by[k].map(s=>{const st=s.status||'draft';return `<button class="scard" data-openstory="${s.id}">
       <div class="sthumb">${s.img?imgTag(s.img,''):''}${s.overlay?`<span class="ov">${esc(s.overlay.length>70?s.overlay.slice(0,70)+'…':s.overlay)}</span>`:(s.img?'':'<span style="color:var(--muted)">Noch kein Overlay</span>')}</div>
-      <div class="sm"><span class="dot s-${st}"></span>${esc(s.format||'Story')}</div></button>`}).join('')}
+      <div class="sm">${esc(s.format||'Story')}${(s.comments||[]).length?`<span class="ccount">${SVG_MSG.replace('<svg','<svg width="13" height="13"')}${s.comments.length}</span>`:''}</div>
+      <div class="stext st-${st}">${STATUS[st]}</div></button>`}).join('')}
   </div></div>`).join('');
   $('#p-stories').innerHTML=`${S.readonly?'':'<div class="actions" style="margin-bottom:24px"><button class="btn" data-act="addstory" data-date="">Story hinzufügen</button></div>'}
     ${html||`<div class="empty">Noch keine Stories für ${esc(monthLabel(S.month))} geplant.</div>`}`;
@@ -498,13 +534,13 @@ function renderPlan(){
     <div class="days">${WD_ORDER.map(d=>{const c=s.days[String(d)]||{};return `<div class="day"><label><input type="checkbox" data-day="${d}" ${c.on?'checked':''} ${dis}>${WD_LONG[d]}</label><input type="time" data-daytime="${d}" value="${esc(c.time||'')}" ${c.on?'':'disabled'} ${dis} aria-label="Uhrzeit ${WD_LONG[d]}"></div>`}).join('')}</div>
 
     <h2>Content-Säulen</h2>
-    <p class="hint">Von CODELLO festgelegt. Jede Säule bekommt eine Farbe, damit man im Raster sieht, ob sie sich abwechseln.</p>
+    <p class="hint">Drei bis fünf Säulen, gemeinsam mit CODELLO festgelegt. Zuordnung: Es zählt, was sie nach dem Post kann, will oder weiß, nicht was auf dem Bild zu sehen ist. Format, Kollektion und Anlass laufen als eigene Angaben mit. Die Farbe erscheint nur in der Verteilungsleiste neben dem Raster.</p>
     <div id="pillars">${s.pillars.map((p,i)=>`<div class="pillar">
       <button class="swbtn" style="background:${esc(p.color)}" data-pcolor="${i}" aria-label="Farbe wechseln" ${dis}></button>
       <input value="${esc(p.name)}" placeholder="Name der Säule" data-pname="${i}" ${dis}>
       <input class="pdesc" value="${esc(p.desc||'')}" placeholder="Worum es geht" data-pdesc="${i}" ${dis}>
       <button class="x" data-pdel="${i}" aria-label="Säule entfernen" ${dis}>×</button></div>`).join('')}</div>
-    ${S.readonly?'':'<button class="btn ghost" data-act="addpillar">Säule hinzufügen</button>'}
+    ${S.readonly?'':`<div class="actions"><button class="btn ghost" data-act="addpillar">Säule hinzufügen</button>${S.isOwner?'<button class="btn ghost" data-act="pillardraft">Entwurf mit vier Säulen einsetzen</button>':''}</div>`}
 
     <h2>Kachelformat im Raster</h2>
     <p class="hint">Instagram zeigt das Profilraster inzwischen im Hochformat 3:4.</p>
@@ -680,10 +716,10 @@ function refreshLive(){
   if(!S.openId)return;const it=current();const box=$('#live');
   if(!it){closeDrawer();return}if(!box)return;
   const st=it.status||'draft';const draft=$('#cnew')?$('#cnew').value:'';
-  const btn=(s,label,cls)=>st===s?'':`<button class="btn ${cls}" data-status="${s}">${label}</button>`;
+  const btn=(s,label,cls)=>st===s?'':`<button class="${cls}" data-status="${s}">${label}</button>`;
   box.innerHTML=`<section class="approve"><h3>Freigabe</h3>
-    <p class="state"><span class="dot s-${st}"></span>${STATUS[st]}${st==='approved'&&it.approvedAt?` <small>${it.approvedBy?'von '+esc(nameFor(it.approvedBy))+' ':''}am ${esc(new Date(it.approvedAt).toLocaleDateString('de-DE'))}</small>`:''}</p>
-    ${S.readonly?'':`<div class="actions" style="margin-bottom:20px">${btn('review','Zur Freigabe geben','ghost')}${btn('approved','Freigeben','ok')}${btn('changes','Anpassung anfordern','warnb')}${st!=='draft'?btn('draft','Zurück auf Entwurf','ghost'):''}</div>`}
+    <p class="state st-${st}"><span class="dot s-${st}"></span>${STATUS[st]}${st==='approved'&&it.approvedAt?` <small>${it.approvedBy?'von '+esc(nameFor(it.approvedBy))+' ':''}am ${esc(new Date(it.approvedAt).toLocaleDateString('de-DE'))}</small>`:''}</p>
+    ${S.readonly?'':`<div class="actions" style="margin-bottom:20px">${btn('approved','Freigeben','btn ok')}${btn('changes','Anpassung anfordern','btn ghost')}${st==='draft'?btn('review','Zur Freigabe geben','btn ghost'):''}${st!=='draft'?btn('draft','Zurück auf Entwurf','link'):''}</div>`}
     <h3>Anmerkungen</h3>
     <ul class="comments">${(it.comments||[]).map(c=>`<li><div class="cm">${c.by?esc(nameFor(c.by))+', ':''}${esc(new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}))}</div><p>${esc(c.text)}</p></li>`).join('')||'<li style="background:none;padding:0;color:var(--muted)">Noch keine Anmerkungen.</li>'}</ul>
     ${S.readonly?'':`<div class="cform"><textarea id="cnew" rows="2" placeholder="Anmerkung oder Änderungswunsch">${esc(draft)}</textarea><button class="btn ghost" data-act="comment">Anmerkung senden</button></div>`}
@@ -779,6 +815,11 @@ document.addEventListener('click',e=>{
       if(!Object.values(S.settings.days).some(d=>d&&d.on)){toast('Lege zuerst im Tab Planung die Posting-Tage fest.');break}
       if(!pd.length){toast('Alle Termine aus dem Rhythmus sind schon angelegt.');break}
       pd.forEach(x=>{const p=blankPost(x.date,x.time);S.posts.push(p);save('posts',p)});render();toast(pd.length+' Termine angelegt.');break}
+    case 'pillardraft':{
+      const used=S.posts.filter(p=>p.pillar).length;
+      if(!confirm('Die bisherigen Säulen werden durch den Entwurf Styling, Print, Anlass und CODELLO ersetzt.'+(used?' '+used+' Posts in diesem Monat verlieren dabei ihre Zuordnung und stehen dann auf „Noch offen“.':'')))break;
+      S.settings.pillars=PILLAR_DRAFT.map((p,i)=>({id:newId('c'),name:p.name,desc:p.desc,color:PCOLORS[i]}));
+      saveSettings();renderPlan();break}
     case 'addpillar':S.settings.pillars.push({id:newId('c'),name:'',desc:'',color:PCOLORS[S.settings.pillars.length%PCOLORS.length]});saveSettings();renderPlan();break;
     case 'addslide':if(it){it.slides=[...(it.slides&&it.slides.length?it.slides:['']),''];save('posts',it);buildDrawer()}break;
     case 'rmslide':if(it){it.slides=(it.slides||[]).filter((_,i)=>i!==+t.dataset.i);save('posts',it);buildDrawer()}break;
