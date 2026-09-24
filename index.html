@@ -256,6 +256,7 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
     <button role="tab" data-tab="stories" aria-selected="false">Stories</button>
     <button role="tab" data-tab="plan" aria-selected="false">Planung</button>
     <button role="tab" data-tab="profil" aria-selected="false">Markenprofil</button>
+    <button class="link" id="pwchange">Passwort ändern</button>
     <button class="link" id="logout">Abmelden</button>
   </nav>
 </div></header>
@@ -875,6 +876,31 @@ $('#lform').addEventListener('submit',async e=>{
   b.disabled=false;
   if(error){er.textContent='E-Mail oder Passwort stimmen nicht.';er.hidden=false;return}
   enter(data.user);
+});
+$('#pwchange').addEventListener('click',()=>{
+  const m=$('#modal');
+  m.innerHTML=`<div class="scrim" data-act="mclose"></div><div class="mbox" role="dialog" aria-label="Passwort ändern">
+    <h2>Passwort ändern</h2>
+    <p>Mindestens zwölf Zeichen. Danach gilt nur noch das neue Passwort, auch auf anderen Geräten.</p>
+    <form id="pwform">
+      <label class="f">Neues Passwort<input type="password" id="pw1" required minlength="12" autocomplete="new-password"></label>
+      <label class="f">Neues Passwort wiederholen<input type="password" id="pw2" required minlength="12" autocomplete="new-password"></label>
+      <p id="pwerr" class="warn" hidden></p>
+      <div class="actions"><button class="btn" type="submit" id="pwbtn">Passwort speichern</button><button class="btn ghost" type="button" data-act="mclose">Abbrechen</button></div>
+    </form></div>`;
+  m.hidden=false;$('#pw1').focus();
+  const err=t=>{const e=$('#pwerr');e.textContent=t;e.hidden=!t};
+  ['pw1','pw2'].forEach(id=>$('#'+id).addEventListener('input',()=>err('')));
+  $('#pwform').addEventListener('submit',async ev=>{
+    ev.preventDefault();const a=$('#pw1').value,b=$('#pw2').value;
+    if(a.length<12){err('Das Passwort braucht mindestens zwölf Zeichen.');$('#pw1').focus();return}
+    if(a!==b){err('Die beiden Eingaben stimmen nicht überein.');$('#pw2').focus();return}
+    const btn=$('#pwbtn');btn.disabled=true;btn.textContent='Wird gespeichert…';
+    const {error}=await S.sb.auth.updateUser({password:a});
+    if(error){btn.disabled=false;btn.textContent='Passwort speichern';
+      err(/same|different/i.test(error.message)?'Das neue Passwort muss sich vom bisherigen unterscheiden.':/weak|short|character/i.test(error.message)?'Das Passwort ist zu schwach. Nimm ein längeres oder mische Zahlen und Zeichen hinein.':'Das Passwort konnte nicht gespeichert werden: '+error.message);return}
+    m.hidden=true;m.innerHTML='';toast('Neues Passwort gespeichert.');
+  });
 });
 $('#logout').addEventListener('click',async()=>{await S.sb.auth.signOut();location.reload()});
 (async()=>{
