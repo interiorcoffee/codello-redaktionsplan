@@ -257,6 +257,19 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
 .cchk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);cursor:pointer}
 .cchk input{width:17px;height:17px;accent-color:var(--bordeaux);margin:0}
 .golink{font-size:14px;color:var(--mint-deep);text-underline-offset:3px}
+.pfoot .comments .cm,.arch .comments .cm{display:flex;gap:10px;align-items:baseline}
+.cdel{margin-left:auto;background:none;border:0;padding:0;font:inherit;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.cdel:hover{color:var(--bordeaux)}
+.abst .close{border-top:1px solid var(--line);padding-top:16px}
+.arch{margin-top:34px}
+.arch>h2{font-weight:300;font-size:26px;margin:0 0 4px}
+.arch>.hint{color:var(--muted);font-size:14px;margin:0 0 16px}
+.arch details{border:1px solid var(--line);border-radius:14px;padding:14px 22px;margin-bottom:12px}
+.arch summary{cursor:pointer;font-size:18px;font-weight:300}
+.arch summary small{color:var(--muted);font-size:13px;font-weight:400;margin-left:10px}
+.arch h3{font-size:14px;font-weight:700;color:var(--muted);margin:18px 0 6px}
+.arch .sum{white-space:pre-wrap;margin:12px 0 4px;max-width:680px}
+.arch .none{color:var(--muted);font-size:14px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -378,6 +391,7 @@ function gridOrder(){return [...S.posts].sort((a,b)=>sortKey(b).localeCompare(so
 const Q={};
 function errMsg(e){
   const m=String((e&&(e.message||e.error_description))||'');
+  if(e&&e.code==='P0001'&&m)return m;
   if(e&&(e.code==='42501'||/row-level security|permission/i.test(m)))return 'Dafür fehlt die Berechtigung. Bitte neu anmelden.';
   if(/JWT|expired/i.test(m))return 'Die Anmeldung ist abgelaufen. Bitte neu anmelden.';
   return 'Speichern hat nicht geklappt. Bitte nochmal versuchen.';
@@ -670,11 +684,27 @@ function notesHtml(k){
   return `<footer class="pfoot">
     <p class="pconf">${c?`<span class="dot s-approved"></span>${confText(c)}${flag}`:'<span class="dot s-review"></span>Noch nicht bestätigt'}</p>
     ${btn}
-    <ul class="comments">${(n.comments||[]).map(c=>`<li><div class="cm">${esc(nameFor(c.by))}, ${esc(new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}))}</div><p>${esc(c.text)}</p></li>`).join('')}</ul>
+    <ul class="comments">${(n.comments||[]).map(c=>`<li><div class="cm"><span>${esc(nameFor(c.by))}, ${esc(cWhen(c.at))}</span>${isMine(c)&&!S.readonly?`<button class="cdel" data-pcdel="${k}" data-at="${esc(c.at)}">Löschen</button>`:''}</div><p>${esc(c.text)}</p></li>`).join('')}</ul>
     <div class="cform"><textarea rows="2" data-pc="${k}" placeholder="Anmerkung zu diesem Punkt"></textarea><button class="btn ghost" data-pcsend="${k}">Anmerkung senden</button></div>
   </footer>`;
 }
 const PSECS=['funktion','gefuehl','rolle','themen','sprache','visuell','formate'];
+const PTITLES={funktion:'Funktion des Accounts',gefuehl:'Wie sich der Account anfühlt',rolle:'Rolle des Absenders',themen:'Perspektiven und Themen',sprache:'Sprache und Formulierungen',visuell:'Visuelle und audiovisuelle Inhalte',formate:'Wiederkehrende Formate'};
+function cWhen(at){return new Date(at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})}
+function isMine(c){return !!S.me&&String(c.by||'').toLowerCase()===String(S.me).toLowerCase()}
+function openNotes(){return PSECS.reduce((s,k)=>s+((S.notes[k]||{}).comments||[]).length,0)}
+const archOpen=new Set();
+function archivHtml(){
+  const list=[...(S.profile.archive||[])].sort((a,b)=>String(b.closedAt).localeCompare(String(a.closedAt)));
+  if(!list.length)return '';
+  return `<section class="arch"><h2>Archiv</h2><p class="hint">Abgeschlossene Monate mit Zusammenfassung und allen Anmerkungen. Nur zum Nachlesen.</p>${list.map(e=>{
+    const d=new Date(e.date?e.date+'T12:00:00':e.closedAt);
+    const meta=`Termin am ${d.toLocaleDateString('de-DE')}${e.with?' mit '+esc(e.with):''}${e.stand?', Stand '+esc(e.stand):''}`;
+    const secs=PSECS.map(k=>{const a=((S.notes[k]||{}).archive||[]).find(x=>x.id===e.id);
+      if(!a||!(a.comments||[]).length)return '';
+      return `<h3>${PTITLES[k]}</h3><ul class="comments">${a.comments.map(c=>`<li><div class="cm"><span>${esc(nameFor(c.by))}, ${esc(cWhen(c.at))}</span></div><p>${esc(c.text)}</p></li>`).join('')}</ul>`}).join('');
+    return `<details data-arch="${esc(e.id)}" ${archOpen.has(e.id)?'open':''}><summary>${MONTHS[d.getMonth()]} ${d.getFullYear()}<small>${meta}</small></summary>${e.text?`<p class="sum">${esc(e.text)}</p>`:''}${secs||'<p class="none">Keine Anmerkungen in diesem Monat.</p>'}</details>`}).join('')}</section>`;
+}
 function terminConf(){
   const A=S.profile.abstimmung||{};
   return {by:S.me,at:new Date().toISOString(),via:'termin',with:(A.with||'').trim(),date:A.date?new Date(A.date+'T12:00:00').toISOString():new Date().toISOString(),stand:S.profile.stand||''};
@@ -697,6 +727,7 @@ function abstimmungHtml(){
     </div>
     <label class="f">Zusammenfassung<textarea rows="5" data-pp="abstimmung.text" placeholder="Was bestätigt wurde, was noch angepasst wird, nächste Schritte">${esc(A.text||'')}</textarea></label>
     <div class="acts">${open?`<button class="btn ok" data-act="tconfall">Alle offenen Punkte als bestätigt markieren</button><span>${open===1?'Ein Punkt offen':open+' Punkte offen'}</span>`:'<span><span class="dot s-approved"></span> Alle sieben Punkte sind bestätigt.</span>'}</div>
+    <div class="acts close">${(openNotes()||A.text)?`<button class="btn ghost" data-act="closemonth">Monat abschließen</button><span>${openNotes()?(openNotes()===1?'Eine Anmerkung geht':openNotes()+' Anmerkungen gehen')+' mit der Zusammenfassung ins Archiv':'Die Zusammenfassung geht ins Archiv'}</span>`:'<span>Nichts zum Abschließen offen.</span>'}</div>
   </section>`;
 }
 function renderProfile(){
@@ -727,6 +758,7 @@ function renderProfile(){
     ${sec('sprache',5,'Sprache und Formulierungen',pv('sprache.text','Regeln für Texte',true)+'<h3>No-Go-Wörter</h3>'+nogos,false)}
     ${sec('visuell',6,'Visuelle und audiovisuelle Inhalte',pv('visuell.text','Regeln für Bild, Video und Ton',true)+'<h3>Referenzbilder</h3>'+mood,false)}
     ${sec('formate',7,'Wiederkehrende Formate',`<p class="plabel" style="margin-bottom:10px">Keep, Kill, Evolve oder Test</p>`+fmts,true)}
+    ${archivHtml()}
   </div>`;
 }
 function touchSection(path){
@@ -734,6 +766,7 @@ function touchSection(path){
   if(map[k]){S.profile.meta=S.profile.meta||{};S.profile.meta[k]=new Date().toISOString()}
 }
 const prof=$('#p-profil');
+prof.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.arch){d.open?archOpen.add(d.dataset.arch):archOpen.delete(d.dataset.arch)}},true);
 prof.addEventListener('change',async e=>{
   const t=e.target;
   if(t.dataset.pp!==undefined&&S.isOwner){setPath(S.profile,t.dataset.pp,t.value);touchSection(t.dataset.pp);saveProfile();if(t.dataset.pp==='stand')renderProfile();return}
@@ -748,7 +781,19 @@ prof.addEventListener('click',e=>{
     n.confirmed=(x.c&&!x.stale)?null:{by:S.me,at:new Date().toISOString(),stand:P.stand||''};saveNote(k);renderProfile();return}
   if(t.dataset.pcsend){const k=t.dataset.pcsend;const ta=prof.querySelector(`textarea[data-pc="${k}"]`);if(!ta||!ta.value.trim())return;
     const n=S.notes[k]=S.notes[k]||{};n.comments=[...(n.comments||[]),{by:S.me,text:ta.value.trim(),at:new Date().toISOString()}];saveNote(k);renderProfile();return}
+  if(t.dataset.pcdel){const k=t.dataset.pcdel;const n=S.notes[k];if(!n)return;
+    const i=(n.comments||[]).findIndex(c=>c.at===t.dataset.at&&isMine(c));if(i<0)return;
+    if(!confirm('Diese Anmerkung wirklich löschen?'))return;
+    n.comments=n.comments.filter((_,j)=>j!==i);saveNote(k);renderProfile();toast('Anmerkung gelöscht.');return}
   if(!S.isOwner)return;
+  if(t.dataset.act==='closemonth'){const A=P.abstimmung||{};const cnt=openNotes();if(!cnt&&!A.text)return;
+    if(!A.text&&!confirm('Es ist noch keine Zusammenfassung eingetragen. Trotzdem abschließen?'))return;
+    if(!confirm(`${cnt?(cnt===1?'Eine Anmerkung wandert':cnt+' Anmerkungen wandern')+' ins Archiv. Danach startet das Markenprofil ohne Anmerkungen.':'Die Zusammenfassung wandert ins Archiv.'} Monat abschließen?`))return;
+    const id=newId('a'),at=new Date().toISOString();
+    PSECS.filter(k=>((S.notes[k]||{}).comments||[]).length).forEach(k=>{const n=S.notes[k];
+      n.archive=[...(n.archive||[]),{id,closedAt:at,comments:n.comments}];n.comments=[];saveNote(k)});
+    P.archive=[...(P.archive||[]),{id,closedAt:at,closedBy:S.me,date:A.date||'',with:A.with||'',stand:P.stand||'',text:A.text||''}];
+    saveProfile();archOpen.add(id);renderProfile();toast('Monat abgeschlossen und archiviert.');return}
   if(t.dataset.tconf){const k=t.dataset.tconf;const n=S.notes[k]=S.notes[k]||{};const x=confState(k);
     n.confirmed=(x.c&&!x.stale&&x.c.via==='termin')?null:terminConf();saveNote(k);renderProfile();return}
   if(t.dataset.act==='tconfall'){const A=S.profile.abstimmung||{};
