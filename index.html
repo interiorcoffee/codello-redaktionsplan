@@ -228,6 +228,25 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
 .nogobox{border:1px solid var(--bordeaux);color:var(--bordeaux);border-radius:10px;padding:10px 12px;font-size:14px;margin:0 0 16px}
 .brandline{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;color:var(--muted);background:var(--wash);border-radius:10px;padding:8px 12px;margin:0 0 18px}
 .brandline b{color:var(--ink);font-weight:700;margin-right:5px}
+.stage{font-size:13px;font-weight:700;color:var(--muted);margin:16px 0 6px}
+.box .stage:first-of-type{margin-top:0}
+.vnote{font-size:13px;color:var(--muted);margin:0 0 12px}
+.gal{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;margin:0 0 8px}
+.gal figure{margin:0;flex:none;width:168px;scroll-snap-align:start}
+.gal .gimg{aspect-ratio:4/5;background:var(--paper);border-radius:6px;overflow:hidden}
+.gal .gimg img{width:100%;height:100%;object-fit:cover;display:block}
+.gal figcaption{display:flex;align-items:center;gap:2px;font-size:13px;color:var(--muted);margin-top:4px}
+.gal figcaption .x{font-size:17px;padding:0 5px;line-height:1}
+.gal figcaption .x:first-of-type{margin-left:auto}
+.gal figcaption .x:disabled{opacity:.3;cursor:default}
+.vwrap{width:min(260px,100%);aspect-ratio:9/16;background:#000;border-radius:10px;overflow:hidden;margin:0 0 8px}
+.vwrap video{width:100%;height:100%;display:block;object-fit:contain;background:#000}
+.vermerk{display:flex;align-items:center;gap:8px 10px;font-size:14px;margin:4px 0 4px;flex-wrap:wrap}
+.vermerk small{color:var(--bordeaux)}
+.vermerk .btn{margin-left:auto}
+.comments li.sys{background:none;border-left:3px solid var(--mint);border-radius:0;padding:2px 0 2px 10px;color:var(--muted);font-size:14px}
+.cbtns{display:flex;gap:8px;flex-wrap:wrap}
+.golink{font-size:14px;color:var(--mint-deep);text-underline-offset:3px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -326,12 +345,17 @@ function imgTag(v,alt){
     return `<img data-sb="${esc(p)}" ${signed[p]?`src="${esc(signed[p])}"`:''} alt="${esc(alt)}" loading="lazy">`}
   return `<img src="${esc(v)}" alt="${esc(alt)}" loading="lazy">`;
 }
+function vidTag(v){
+  if(!v||!v.startsWith('sb:'))return '';const p=v.slice(3);
+  if(!signed[p]){need.add(p);clearTimeout(signT);signT=setTimeout(signAll,30)}
+  return `<video data-sb="${esc(p)}" ${signed[p]?`src="${esc(signed[p])}"`:''} controls playsinline preload="metadata"></video>`;
+}
 async function signAll(){
   const paths=[...need];need.clear();if(!paths.length||!S.sb)return;
   const {data,error}=await S.sb.storage.from('tiles').createSignedUrls(paths,60*60*12);
   if(error){console.error(error);return}
   (data||[]).forEach((d,i)=>{if(d&&d.signedUrl)signed[paths[i]]=d.signedUrl});
-  document.querySelectorAll('img[data-sb]').forEach(i=>{const u=signed[i.dataset.sb];if(u&&i.getAttribute('src')!==u)i.src=u});
+  document.querySelectorAll('img[data-sb],video[data-sb]').forEach(i=>{const u=signed[i.dataset.sb];if(u&&i.getAttribute('src')!==u)i.src=u});
 }
 function removeFile(v){if(v&&v.startsWith('sb:')&&S.sb)S.sb.storage.from('tiles').remove([v.slice(3)]).then(({error})=>{if(error)console.warn(error)})}
 function nameFor(e){return e?(S.members[String(e).toLowerCase()]||e):'Jemand'}
@@ -435,7 +459,34 @@ async function storeCanvas(c,prefix){
   if(error){console.error(error);throw new Error('Bild konnte nicht hochgeladen werden.')}
   return 'sb:'+path;
 }
-async function fileToStored(file,maxW){const img=await loadImg(file);return storeCanvas(cut(img,0,0,img.naturalWidth,img.naturalHeight,maxW))}
+async function fileToStored(file,maxW,prefix){const img=await loadImg(file);return storeCanvas(cut(img,0,0,img.naturalWidth,img.naturalHeight,maxW),prefix)}
+const VMAX=50*1024*1024;
+async function storeVideo(file,prefix){
+  if(file.size>VMAX)throw new Error('Das Video ist größer als 50 MB. Bitte als Vorschau in 720p exportieren.');
+  const ext=((file.name||'').split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp4';
+  const path=(prefix||S.month)+'/'+newId('v')+'.'+ext;
+  const {error}=await S.sb.storage.from('tiles').upload(path,file,{contentType:file.type||'video/mp4'});
+  if(error){console.error(error);const m=String(error.message||'');
+    throw new Error(/size|exceed|large|payload/i.test(m)?'Das Video ist zu groß für den Speicher. Bitte kleiner exportieren.':/mime|type/i.test(m)?'Dieses Dateiformat wird nicht angenommen. Bitte als MP4 exportieren.':'Video konnte nicht hochgeladen werden.')}
+  return 'sb:'+path;
+}
+/* Jede Änderung an Slides oder Schnitt ist eine neue Version. Eine erteilte Freigabe gilt dann nicht mehr. */
+function newVersion(it,what){
+  it.mv=(it.mv||0)+1;const was=it.status||'draft';
+  if(was!=='draft')it.comments=[...(it.comments||[]),{by:S.me||'',text:what,at:new Date().toISOString(),sys:true,v:it.mv}];
+  if(was==='approved'||was==='changes'){it.status='review';delete it.approvedBy;delete it.approvedAt}
+  return was==='approved';
+}
+const CONCEPT=['hook','reelFlow','audio'];
+function conceptInner(p){
+  const c=p.concept;const ch=!!(c&&p.conceptAt&&p.conceptAt>c.at);
+  const txt=c?`<span class="dot s-approved"></span><span>Konzept freigegeben${c.by?' von '+esc(nameFor(c.by)):''} am ${esc(new Date(c.at).toLocaleDateString('de-DE'))}${ch?' <small>Seitdem geändert</small>':''}</span>`
+    :'<span class="dot s-review"></span><span>Konzept noch nicht freigegeben</span>';
+  const btn=(S.readonly||S.isOwner)?'':`<button class="btn ${c&&!ch?'ghost':'ok'}" data-act="concept">${c&&!ch?'Freigabe zurücknehmen':'Konzept freigeben'}</button>`;
+  return txt+btn;
+}
+function updateConcept(){const el=$('#concept');const it=current();if(el&&it)el.innerHTML=conceptInner(it)}
+function mediaFiles(it){return [it.img,it.video,...(it.media||[])].filter(Boolean)}
 
 /* ---------- Planungshilfen ---------- */
 function plannedDates(m){
@@ -474,7 +525,7 @@ function renderFeed(){
   const tiles=list.map(p=>{
     const pl=pillar(p.pillar);const st=p.status||'draft';
     const dim=S.filter!=='all'&&st!==S.filter;const ng=nogoHits(itemTexts(p)).length>0;
-    const nc=(p.comments||[]).length;const rp=rep.has(p.id);
+    const nc=(p.comments||[]).filter(c=>!c.sys).length;const rp=rep.has(p.id);
     return `<button class="tile t-${st}${dim?' dim':''}" data-open="${p.id}" aria-label="${esc(fmtLong(p.date)+', '+FORMATS[p.format||'single']+', '+STATUS[st]+(pl?', '+pl.name:'')+(nc?', '+nc+' Anmerkungen':''))}">
       ${p.img?imgTag(p.img,''):`<span class="tph"><strong>${esc(FORMATS[p.format||'single'])}</strong>Kachel fehlt noch</span>`}
       ${ICON[p.format]||''}
@@ -669,14 +720,31 @@ function postForm(p){
   const capLen=(p.caption||'').length;const tags=((p.hashtags||'').match(/#[^\s#]+/g)||[]).length;
   let fmt='';
   if(f==='carousel'){
-    const sl=p.slides&&p.slides.length?p.slides:[''];
-    fmt=`<div class="box"><h3>Slides</h3>${sl.map((t,i)=>`<div class="slide"><div class="sh">Slide ${i+1}${sl.length>1?`<button class="link" data-act="rmslide" data-i="${i}">entfernen</button>`:''}</div><textarea rows="2" data-slide="${i}" placeholder="Motiv und Text auf der Slide">${esc(t)}</textarea></div>`).join('')}
+    const sl=p.slides&&p.slides.length?p.slides:[''];const m=p.media||[];
+    const gal=m.length?`<div class="gal">${m.map((v,i)=>`<figure><div class="gimg">${imgTag(v,'Slide '+(i+1))}</div><figcaption>Slide ${i+1}${S.readonly?'':`<button class="x" data-mmove="${i}" data-dir="-1" aria-label="Slide ${i+1} nach vorn" ${i===0?'disabled':''}>‹</button><button class="x" data-mmove="${i}" data-dir="1" aria-label="Slide ${i+1} nach hinten" ${i===m.length-1?'disabled':''}>›</button><button class="x" data-mdel="${i}" aria-label="Slide ${i+1} entfernen">×</button>`}</figcaption></figure>`).join('')}</div>
+      <p class="vnote">${m.length===1?'Ein Bild':m.length+' Bilder'}${p.mv?', Version '+p.mv:''}. Die Slides erscheinen nur hier, im Raster steht weiter die Kachel.</p>`
+      :'<p class="vnote">Noch keine Bilder. Hier kommen alle Slides in der richtigen Reihenfolge hinein. Im Raster steht weiter nur die Kachel.</p>';
+    fmt=`<div class="box"><h3>Slides</h3>
+      <p class="stage">So sieht das Karussell aus</p>${gal}
+      ${S.readonly?'':'<p><label class="btn ghost">Bilder hinzufügen<input type="file" accept="image/*" multiple data-media hidden></label></p>'}
+      <p class="stage">Motiv und Text je Slide</p>
+      ${sl.map((t,i)=>`<div class="slide"><div class="sh">Slide ${i+1}${sl.length>1?`<button class="link" data-act="rmslide" data-i="${i}">entfernen</button>`:''}</div><textarea rows="2" data-slide="${i}" placeholder="Motiv und Text auf der Slide">${esc(t)}</textarea></div>`).join('')}
       <p><button class="link" data-act="addslide">Slide hinzufügen</button></p></div>`;
   }else if(f==='reel'){
+    const vid=p.video?`<div class="vwrap">${vidTag(p.video)}</div>
+      <p class="vnote">Version ${p.mv||1}${p.videoName?', '+esc(p.videoName):''}. Anmerkungen am besten mit Zeitangabe, zum Beispiel „0:04 Overlay steht zu kurz“.</p>`
+      :'<p class="vnote">Noch keine Vorschau. Als MP4 in 720p exportieren, höchstens 50 MB.</p>';
     fmt=`<div class="box"><h3>Reel</h3>
+      <p class="stage">Stufe 1: Konzept</p>
+      <p class="vnote">Wird freigegeben, bevor geschnitten wird. Die Overlay-Texte stehen hier im Wortlaut, damit im Schnitt nur noch Timing und Bildauswahl offen sind.</p>
       <label class="f">Hook in den ersten Sekunden<input data-f="hook" value="${esc(p.hook)}"></label>
-      <label class="f">Ablauf und Text-Overlays<textarea rows="4" data-f="reelFlow">${esc(p.reelFlow)}</textarea></label>
-      <label class="f">Musik oder Voice-Over<input data-f="audio" value="${esc(p.audio)}"></label></div>`;
+      <label class="f">Ablauf und Text-Overlays im Wortlaut<textarea rows="5" data-f="reelFlow">${esc(p.reelFlow)}</textarea></label>
+      <label class="f">Musik oder Voice-Over<input data-f="audio" value="${esc(p.audio)}"></label>
+      <div class="vermerk" id="concept">${conceptInner(p)}</div>
+      <p class="stage">Stufe 2: Schnitt</p>
+      ${vid}
+      ${S.readonly?'':`<div class="actions"><label class="btn ghost">${p.video?'Neue Version hochladen':'Vorschau hochladen'}<input type="file" accept="video/mp4,video/quicktime,video/*" data-video hidden></label>${p.video?'<button class="link" data-act="rmvideo">Vorschau löschen</button>':''}</div>`}
+    </div>`;
   }
   return `<div class="dh"><div><p>${esc(fmtLong(p.date))}${p.time?', '+esc(p.time)+' Uhr':''}</p><h2>${esc(FORMATS[f])}${pl?' für '+esc(pl.name):''}</h2></div><button class="round" data-act="close" aria-label="Schließen">×</button></div>
   <div class="dbody">
@@ -692,6 +760,8 @@ function postForm(p){
     <label class="f">Caption<textarea rows="7" data-f="caption">${esc(p.caption)}</textarea><span class="count${capLen>2200?' over':''}" id="capc">${capLen} von 2.200 Zeichen</span></label>
     <label class="f">Hashtags im ersten Kommentar<input data-f="hashtags" value="${esc(p.hashtags)}" placeholder="#codello"><span class="count${tags>5?' over':''}" id="tagc">${tags} von maximal 5</span></label>
     <label class="f">Produktverlinkung<input data-f="products" value="${esc(p.products)}" placeholder="Produkte oder Links"></label>
+    <label class="f">Link zum veröffentlichten Post<input type="url" data-f="igLink" value="${esc(p.igLink)}" placeholder="https://www.instagram.com/…"></label>
+    ${p.igLink&&/^https?:\/\//i.test(p.igLink)?`<p style="margin:-8px 0 16px"><a class="golink" href="${esc(p.igLink)}" target="_blank" rel="noopener">Auf Instagram ansehen</a></p>`:''}
     <div id="live"></div>
     <button class="link danger" data-act="delete">Post löschen</button>
   </div>`;
@@ -722,22 +792,26 @@ function refreshLive(){
     <p class="state st-${st}"><span class="dot s-${st}"></span>${STATUS[st]}${st==='approved'&&it.approvedAt?` <small>${it.approvedBy?'von '+esc(nameFor(it.approvedBy))+' ':''}am ${esc(new Date(it.approvedAt).toLocaleDateString('de-DE'))}</small>`:''}</p>
     ${S.readonly?'':`<div class="actions" style="margin-bottom:20px">${btn('approved','Freigeben','btn ok')}${btn('changes','Anpassung anfordern','btn ghost')}${st==='draft'?btn('review','Zur Freigabe geben','btn ghost'):''}${st!=='draft'?btn('draft','Zurück auf Entwurf','link'):''}</div>`}
     <h3>Anmerkungen</h3>
-    <ul class="comments">${(it.comments||[]).map(c=>`<li><div class="cm">${c.by?esc(nameFor(c.by))+', ':''}${esc(new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}))}</div><p>${esc(c.text)}</p></li>`).join('')||'<li style="background:none;padding:0;color:var(--muted)">Noch keine Anmerkungen.</li>'}</ul>
-    ${S.readonly?'':`<div class="cform"><textarea id="cnew" rows="2" placeholder="Anmerkung oder Änderungswunsch">${esc(draft)}</textarea><button class="btn ghost" data-act="comment">Anmerkung senden</button></div>`}
+    <ul class="comments">${(it.comments||[]).map(c=>{const when=esc(new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}));
+      return c.sys?`<li class="sys">${esc(c.text)}${c.v?', Version '+c.v:''}. ${c.by?esc(nameFor(c.by))+', ':''}${when}</li>`
+      :`<li><div class="cm">${c.by?esc(nameFor(c.by))+', ':''}${when}${c.v?', zu Version '+c.v:''}</div><p>${esc(c.text)}</p></li>`}).join('')||'<li style="background:none;padding:0;color:var(--muted)">Noch keine Anmerkungen.</li>'}</ul>
+    ${S.readonly?'':`<div class="cform"><textarea id="cnew" rows="2" placeholder="${it.video&&S.openKind==='post'&&it.format==='reel'?'Anmerkung, gern mit Zeitangabe':'Anmerkung oder Änderungswunsch'}">${esc(draft)}</textarea><div class="cbtns"><button class="btn ghost" data-act="comment">Anmerkung senden</button>${it.video&&S.openKind==='post'&&it.format==='reel'?'<button class="btn ghost" data-act="ts">Zeitstempel aus dem Video</button>':''}</div></div>`}
   </section>`;
 }
 function coll(){return S.openKind==='post'?'posts':'stories'}
 function setField(k,v){
   const it=current();if(!it)return;it[k]=v;
   if(k==='date'){it.month=v?v.slice(0,7):S.month}
-  save(coll(),it);
+  if(CONCEPT.includes(k))it.conceptAt=new Date().toISOString();
+  save(coll(),it);if(CONCEPT.includes(k))updateConcept();
   if(k==='date'&&it.month!==S.month){toast('Verschoben nach '+monthLabel(it.month)+'.');closeDrawer()}
   else if(k==='format'||k==='date'||k==='time'||k==='pillar')buildDrawer();
   render();
 }
 function addComment(text){
   const it=current();if(!it||!text.trim())return;
-  it.comments=[...(it.comments||[]),{by:S.me||'',text:text.trim(),at:new Date().toISOString()}];
+  const c={by:S.me||'',text:text.trim(),at:new Date().toISOString()};if(it.mv&&(it.video||(it.media||[]).length))c.v=it.mv;
+  it.comments=[...(it.comments||[]),c];
 }
 function setStatus(s){
   const it=current();if(!it)return;const box=$('#cnew');
@@ -803,6 +877,10 @@ document.addEventListener('click',e=>{
   if(t.dataset.status){setStatus(t.dataset.status);return}
   if(t.dataset.pcolor!==undefined){const p=S.settings.pillars[+t.dataset.pcolor];p.color=PCOLORS[(PCOLORS.indexOf(p.color)+1)%PCOLORS.length];saveSettings();renderPlan();return}
   if(t.dataset.pdel!==undefined){const p=S.settings.pillars[+t.dataset.pdel];if(confirm('Säule „'+(p.name||'Ohne Namen')+'“ entfernen?')){S.settings.pillars.splice(+t.dataset.pdel,1);saveSettings();renderPlan()}return}
+  if(t.dataset.mmove!==undefined){const it=current();if(!it)return;const i=+t.dataset.mmove,j=i+(+t.dataset.dir);const m=[...(it.media||[])];if(j<0||j>=m.length)return;
+    [m[i],m[j]]=[m[j],m[i]];it.media=m;const reset=newVersion(it,'Reihenfolge der Slides geändert');save('posts',it);buildDrawer();render();if(reset)toast('Reihenfolge geändert. Die Freigabe wurde zurückgesetzt.');return}
+  if(t.dataset.mdel!==undefined){const it=current();if(!it)return;const i=+t.dataset.mdel;if(!confirm('Slide '+(i+1)+' entfernen?'))return;
+    const m=[...(it.media||[])];const [v]=m.splice(i,1);it.media=m;removeFile(v);const reset=newVersion(it,'Slide '+(i+1)+' entfernt');save('posts',it);buildDrawer();render();if(reset)toast('Slide entfernt. Die Freigabe wurde zurückgesetzt.');return}
   const a=t.dataset.act;if(!a)return;
   const it=current();
   switch(a){
@@ -824,9 +902,13 @@ document.addEventListener('click',e=>{
     case 'addpillar':S.settings.pillars.push({id:newId('c'),name:'',desc:'',color:PCOLORS[S.settings.pillars.length%PCOLORS.length]});saveSettings();renderPlan();break;
     case 'addslide':if(it){it.slides=[...(it.slides&&it.slides.length?it.slides:['']),''];save('posts',it);buildDrawer()}break;
     case 'rmslide':if(it){it.slides=(it.slides||[]).filter((_,i)=>i!==+t.dataset.i);save('posts',it);buildDrawer()}break;
+    case 'rmvideo':if(it&&confirm('Vorschau löschen? Das spart Speicher, sobald das Reel online ist. Die Freigabe und die Anmerkungen bleiben erhalten.')){removeFile(it.video);it.video='';delete it.videoName;save('posts',it);buildDrawer();render()}break;
+    case 'concept':if(it){const c=it.concept;const ch=!!(c&&it.conceptAt&&it.conceptAt>c.at);it.concept=(c&&!ch)?null:{by:S.me||'',at:new Date().toISOString()};save('posts',it);updateConcept()}break;
+    case 'ts':{const v=$('#drawer video');const b=$('#cnew');if(!v||!b)break;v.pause();const sec=Math.floor(v.currentTime||0);
+      const stamp=Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')+' ';b.value=b.value&&!/\s$/.test(b.value)?b.value+'\n'+stamp:b.value+stamp;b.focus();b.setSelectionRange(b.value.length,b.value.length);break}
     case 'rmimg':if(it){removeFile(it.img);it.img='';save(coll(),it);buildDrawer();render()}break;
     case 'comment':{const b=$('#cnew');if(b&&b.value.trim()&&it){addComment(b.value);b.value='';save(coll(),it);refreshLive()}break}
-    case 'delete':if(it&&confirm(S.openKind==='post'?'Diesen Post löschen?':'Diese Story löschen?')){const c=coll(),id=it.id;removeFile(it.img);S.posts=S.posts.filter(x=>x.id!==id);S.stories=S.stories.filter(x=>x.id!==id);closeDrawer();remove(c,id);render()}break;
+    case 'delete':if(it&&confirm(S.openKind==='post'?'Diesen Post löschen?':'Diese Story löschen?')){const c=coll(),id=it.id;mediaFiles(it).forEach(removeFile);S.posts=S.posts.filter(x=>x.id!==id);S.stories=S.stories.filter(x=>x.id!==id);closeDrawer();remove(c,id);render()}break;
   }
 });
 $('#scrim').addEventListener('click',closeDrawer);
@@ -840,6 +922,21 @@ drawer.addEventListener('change',async e=>{
   if(t.dataset.file){const f=t.files[0];if(!f)return;const it=current();if(!it)return;
     toast('Bild wird gespeichert…');
     try{const old=it.img;const v=await fileToStored(f,1080);it.img=v;removeFile(old);save(coll(),it);buildDrawer();render();toast('Bild gespeichert.')}catch(err){toast(err.message||'Bild konnte nicht gespeichert werden.')}
+    return}
+  if(t.dataset.media!==undefined){const files=[...t.files].sort((a,b)=>a.name.localeCompare(b.name,'de',{numeric:true}));t.value='';const it=current();if(!files.length||!it)return;
+    toast(files.length===1?'Bild wird gespeichert…':files.length+' Bilder werden gespeichert…');
+    try{const out=[];for(const f of files)out.push(await fileToStored(f,1080,it.month));
+      it.media=[...(it.media||[]),...out];const reset=newVersion(it,files.length===1?'Slide hinzugefügt':files.length+' Slides hinzugefügt');
+      save('posts',it);if(S.openId===it.id)buildDrawer();render();toast(reset?'Gespeichert. Die Freigabe wurde zurückgesetzt.':'Gespeichert.')}
+    catch(err){toast(err.message||'Bilder konnten nicht gespeichert werden.')}
+    return}
+  if(t.dataset.video!==undefined){const f=t.files[0];t.value='';const it=current();if(!f||!it)return;
+    if(f.size>VMAX){toast('Das Video ist größer als 50 MB. Bitte als Vorschau in 720p exportieren.');return}
+    const lbl=t.closest('label');if(lbl)lbl.firstChild.textContent='Wird hochgeladen…';toast('Video wird hochgeladen…');
+    try{const old=it.video;const v=await storeVideo(f,it.month);it.video=v;it.videoName=f.name;removeFile(old);
+      const reset=newVersion(it,old?'Neue Schnittversion hochgeladen':'Schnitt hochgeladen');
+      save('posts',it);if(S.openId===it.id)buildDrawer();render();toast(reset?'Neue Version gespeichert. Die Freigabe wurde zurückgesetzt.':'Video gespeichert.')}
+    catch(err){if(lbl)lbl.firstChild.textContent=it.video?'Neue Version hochladen':'Vorschau hochladen';toast(err.message||'Video konnte nicht hochgeladen werden.')}
     return}
   if(t.dataset.slide!==undefined){const it=current();const sl=[...(it.slides&&it.slides.length?it.slides:[''])];sl[+t.dataset.slide]=t.value;it.slides=sl;save('posts',it);return}
   if(t.dataset.f){if(t.type==='radio'&&!t.checked)return;setField(t.dataset.f,t.value)}
