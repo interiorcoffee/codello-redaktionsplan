@@ -221,6 +221,14 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
 .pfoot{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
 .pconf{display:flex;align-items:center;gap:8px;font-size:14px;margin:0 0 10px;flex-wrap:wrap}
 .pconf small{color:var(--bordeaux)}
+.pconf .via{color:var(--muted);font-size:13px;width:100%;padding-left:18px}
+.abst{background:var(--wash);border:1px solid var(--line);border-radius:14px;padding:20px 22px 6px;margin-bottom:26px}
+.abst h2{font-weight:300;font-size:22px;margin:0 0 4px}
+.abst .hint{color:var(--muted);font-size:14px;margin:0 0 16px;max-width:620px}
+.abst .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 14px}
+.abst .acts{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 16px}
+.abst .acts span{color:var(--muted);font-size:14px}
+.abst .sum{white-space:pre-wrap;margin:6px 0 16px;max-width:680px}
 .mood{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:12px}
 .mood figure{margin:0;position:relative;aspect-ratio:4/5;background:var(--wash);border-radius:6px;overflow:hidden}
 .mood img{width:100%;height:100%;object-fit:cover}
@@ -638,15 +646,56 @@ function pv(path,label,multi,ph){
   if(S.isOwner)return `<label class="f">${label}${multi?`<textarea rows="3" data-pp="${path}" placeholder="${esc(ph||'')}">${esc(v)}</textarea>`:`<input data-pp="${path}" value="${esc(v)}" placeholder="${esc(ph||'')}">`}</label>`;
   return `<p class="plabel">${label}</p><p class="pview${v?'':' empty'}">${v?esc(v):'Noch offen'}</p>`;
 }
+function confState(k){
+  const n=S.notes[k]||{};const c=n.confirmed;if(!c)return {c:null,stale:false,changed:false,oldStand:false};
+  const meta=(S.profile.meta||{})[k];const changed=!!(meta&&meta>c.at);
+  const cur=S.profile.stand||'';const oldStand=!!(c.stand&&cur&&c.stand!==cur);
+  return {c,changed,oldStand,stale:changed||oldStand};
+}
+function confText(c){
+  const d=new Date(c.date||c.at).toLocaleDateString('de-DE');
+  const st=c.stand?`, Stand ${esc(c.stand)}`:'';
+  if(c.via==='termin')return `Im Termin bestätigt${c.with?' mit '+esc(c.with):''} am ${esc(d)}${st}<span class="via">Eingetragen von ${esc(nameFor(c.by))}</span>`;
+  return `Bestätigt von ${esc(nameFor(c.by))} am ${esc(d)}${st}`;
+}
 function notesHtml(k){
-  const n=S.notes[k]||{};const meta=(S.profile.meta||{})[k];
-  const changed=n.confirmed&&meta&&meta>n.confirmed.at;
+  const n=S.notes[k]||{};const {c,changed,oldStand,stale}=confState(k);
+  const flag=changed?' <small>Seitdem geändert</small>':(oldStand?' <small>Neuer Stand, bitte neu bestätigen</small>':'');
+  let btn='';
+  if(!S.isOwner)btn=`<p><button class="btn ${c&&!stale?'ghost':'ok'}" data-conf="${k}">${c&&!stale?'Bestätigung zurücknehmen':'Bestätigen'}</button></p>`;
+  else if(c&&!stale&&c.via==='termin')btn=`<p><button class="btn ghost" data-tconf="${k}">Markierung zurücknehmen</button></p>`;
+  else if(!c||stale)btn=`<p><button class="btn ghost" data-tconf="${k}">Als im Termin bestätigt markieren</button></p>`;
   return `<footer class="pfoot">
-    <p class="pconf">${n.confirmed?`<span class="dot s-approved"></span>Bestätigt von ${esc(nameFor(n.confirmed.by))} am ${esc(new Date(n.confirmed.at).toLocaleDateString('de-DE'))}${changed?' <small>Seitdem geändert</small>':''}`:'<span class="dot s-review"></span>Noch nicht bestätigt'}</p>
-    ${S.isOwner?'':`<p><button class="btn ${n.confirmed&&!changed?'ghost':'ok'}" data-conf="${k}">${n.confirmed&&!changed?'Bestätigung zurücknehmen':'Bestätigen'}</button></p>`}
+    <p class="pconf">${c?`<span class="dot s-approved"></span>${confText(c)}${flag}`:'<span class="dot s-review"></span>Noch nicht bestätigt'}</p>
+    ${btn}
     <ul class="comments">${(n.comments||[]).map(c=>`<li><div class="cm">${esc(nameFor(c.by))}, ${esc(new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}))}</div><p>${esc(c.text)}</p></li>`).join('')}</ul>
     <div class="cform"><textarea rows="2" data-pc="${k}" placeholder="Anmerkung zu diesem Punkt"></textarea><button class="btn ghost" data-pcsend="${k}">Anmerkung senden</button></div>
   </footer>`;
+}
+const PSECS=['funktion','gefuehl','rolle','themen','sprache','visuell','formate'];
+function terminConf(){
+  const A=S.profile.abstimmung||{};
+  return {by:S.me,at:new Date().toISOString(),via:'termin',with:(A.with||'').trim(),date:A.date?new Date(A.date+'T12:00:00').toISOString():new Date().toISOString(),stand:S.profile.stand||''};
+}
+function abstimmungHtml(){
+  const A=S.profile.abstimmung||{};
+  const open=PSECS.filter(k=>{const x=confState(k);return !x.c||x.stale}).length;
+  if(!S.isOwner){
+    if(!A.text)return '';
+    const d=A.date?new Date(A.date+'T12:00:00').toLocaleDateString('de-DE'):'';
+    return `<section class="abst"><h2>Ergebnis der Abstimmung</h2><p class="hint">${d?'Termin am '+esc(d):'Termin'}${A.with?' mit '+esc(A.with):''}${S.profile.stand?', Stand '+esc(S.profile.stand):''}</p><p class="sum">${esc(A.text)}</p></section>`;
+  }
+  return `<section class="abst">
+    <h2>Abstimmung im Termin</h2>
+    <p class="hint">Für Punkte, die ihr im Termin gemeinsam freigegeben habt. Die Markierung gilt für den eingetragenen Stand des Profils. CODELLO sieht die Zusammenfassung oben im Markenprofil.</p>
+    <div class="row">
+      <label class="f">Datum des Termins<input type="date" data-pp="abstimmung.date" value="${esc(A.date||'')}"></label>
+      <label class="f">Abgestimmt mit<input data-pp="abstimmung.with" value="${esc(A.with||'')}" placeholder="z. B. Matthias"></label>
+      <label class="f">Stand des Profils<input data-pp="stand" value="${esc(S.profile.stand||'')}" placeholder="z. B. Oktober 2026"></label>
+    </div>
+    <label class="f">Zusammenfassung<textarea rows="5" data-pp="abstimmung.text" placeholder="Was bestätigt wurde, was noch angepasst wird, nächste Schritte">${esc(A.text||'')}</textarea></label>
+    <div class="acts">${open?`<button class="btn ok" data-act="tconfall">Alle offenen Punkte als bestätigt markieren</button><span>${open===1?'Ein Punkt offen':open+' Punkte offen'}</span>`:'<span><span class="dot s-approved"></span> Alle sieben Punkte sind bestätigt.</span>'}</div>
+  </section>`;
 }
 function renderProfile(){
   const el=$('#p-profil');
@@ -668,7 +717,7 @@ function renderProfile(){
     :(fi.filter(f=>f.name).length?`<ul class="taglist">${fi.filter(f=>f.name).map(f=>`<li><span class="st st-${esc(f.status||'test')}">${FSTATUS[f.status]||'Test'}</span><span><strong>${esc(f.name)}</strong>${f.desc?` <span style="color:var(--muted)">${esc(f.desc)}</span>`:''}</span></li>`).join('')}</ul>`:'<p class="pview empty">Noch keine Formate.</p>')+(P.formate&&P.formate.reviewed?`<p class="plabel">Zuletzt bewertet: ${esc(P.formate.reviewed)}</p>`:'');
   el.innerHTML=`<div class="profil">
     <p class="intro">Die Grundlage für alle Inhalte auf dem Kanal. Jeder Punkt lässt sich einzeln bestätigen oder kommentieren.</p>
-    ${own?`<div style="max-width:260px">${pv('stand','Stand des Profils',false,'z. B. Oktober 2026')}</div>`:''}
+    ${abstimmungHtml()}
     ${sec('funktion',1,'Funktion des Accounts',pv('funktion.main','Hauptfunktion')+pv('funktion.others','Weitere Funktionen')+pv('funktion.text','Was das für die Inhalte heißt',true),true)}
     ${sec('gefuehl',2,'Wie sich der Account anfühlt',`<p class="plabel">Drei Eigenschaften in Rangfolge</p>`+gef+pv('gefuehl.text','Erläuterung',true),false)}
     ${sec('rolle',3,'Rolle des Absenders',pv('rolle.name','Rolle')+pv('rolle.text','Was das bedeutet',true),true)}
@@ -685,7 +734,7 @@ function touchSection(path){
 const prof=$('#p-profil');
 prof.addEventListener('change',async e=>{
   const t=e.target;
-  if(t.dataset.pp!==undefined&&S.isOwner){setPath(S.profile,t.dataset.pp,t.value);touchSection(t.dataset.pp);saveProfile();return}
+  if(t.dataset.pp!==undefined&&S.isOwner){setPath(S.profile,t.dataset.pp,t.value);touchSection(t.dataset.pp);saveProfile();if(t.dataset.pp==='stand')renderProfile();return}
   if(t.dataset.mood!==undefined&&S.isOwner){const f=t.files[0];if(!f)return;toast('Bild wird gespeichert…');
     try{const img=await loadImg(f);const v=await storeCanvas(cut(img,0,0,img.naturalWidth,img.naturalHeight,900),'profil');
       S.profile.visuell=S.profile.visuell||{};S.profile.visuell.images=[...(S.profile.visuell.images||[]),v];touchSection('visuell');saveProfile();renderProfile();toast('Bild gespeichert.')}
@@ -693,11 +742,17 @@ prof.addEventListener('change',async e=>{
 });
 prof.addEventListener('click',e=>{
   const t=e.target.closest('button');if(!t)return;const P=S.profile;
-  if(t.dataset.conf){const k=t.dataset.conf;const n=S.notes[k]=S.notes[k]||{};const meta=(P.meta||{})[k];const changed=n.confirmed&&meta&&meta>n.confirmed.at;
-    n.confirmed=(n.confirmed&&!changed)?null:{by:S.me,at:new Date().toISOString()};saveNote(k);renderProfile();return}
+  if(t.dataset.conf){const k=t.dataset.conf;const n=S.notes[k]=S.notes[k]||{};const x=confState(k);
+    n.confirmed=(x.c&&!x.stale)?null:{by:S.me,at:new Date().toISOString(),stand:P.stand||''};saveNote(k);renderProfile();return}
   if(t.dataset.pcsend){const k=t.dataset.pcsend;const ta=prof.querySelector(`textarea[data-pc="${k}"]`);if(!ta||!ta.value.trim())return;
     const n=S.notes[k]=S.notes[k]||{};n.comments=[...(n.comments||[]),{by:S.me,text:ta.value.trim(),at:new Date().toISOString()}];saveNote(k);renderProfile();return}
   if(!S.isOwner)return;
+  if(t.dataset.tconf){const k=t.dataset.tconf;const n=S.notes[k]=S.notes[k]||{};const x=confState(k);
+    n.confirmed=(x.c&&!x.stale&&x.c.via==='termin')?null:terminConf();saveNote(k);renderProfile();return}
+  if(t.dataset.act==='tconfall'){const A=S.profile.abstimmung||{};
+    const ks=PSECS.filter(k=>{const x=confState(k);return !x.c||x.stale});if(!ks.length)return;
+    if(!confirm(`${ks.length===1?'Einen Punkt':ks.length+' Punkte'} als im Termin bestätigt markieren${A.with?' (mit '+A.with+')':''}${S.profile.stand?', Stand '+S.profile.stand:''}?`))return;
+    const c=terminConf();ks.forEach(k=>{const n=S.notes[k]=S.notes[k]||{};n.confirmed={...c};saveNote(k)});renderProfile();toast(ks.length===1?'Ein Punkt markiert.':ks.length+' Punkte markiert.');return}
   if(t.dataset.act==='addnogo'){P.sprache=P.sprache||{};P.sprache.nogos=[...(P.sprache.nogos||[]),{word:'',alt:''}];saveProfile();renderProfile();return}
   if(t.dataset.nogodel!==undefined){P.sprache.nogos.splice(+t.dataset.nogodel,1);touchSection('sprache');saveProfile();renderProfile();return}
   if(t.dataset.act==='addformat'){P.formate=P.formate||{};P.formate.items=[...(P.formate.items||[]),{id:newId('f'),name:'',desc:'',status:'test'}];saveProfile();renderProfile();return}
