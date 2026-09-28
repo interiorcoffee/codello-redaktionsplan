@@ -254,6 +254,8 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
 .vermerk .btn{margin-left:auto}
 .comments li.sys{background:none;border-left:3px solid var(--mint);border-radius:0;padding:2px 0 2px 10px;color:var(--muted);font-size:14px}
 .cbtns{display:flex;gap:8px;flex-wrap:wrap}
+.cchk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);cursor:pointer}
+.cchk input{width:17px;height:17px;accent-color:var(--bordeaux);margin:0}
 .golink{font-size:14px;color:var(--mint-deep);text-underline-offset:3px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -842,6 +844,7 @@ function refreshLive(){
   if(!S.openId)return;const it=current();const box=$('#live');
   if(!it){closeDrawer();return}if(!box)return;
   const st=it.status||'draft';const draft=$('#cnew')?$('#cnew').value:'';
+  const chkEl=$('#cchg');const chk=chkEl?chkEl.checked:(st==='review'||st==='approved');
   const btn=(s,label,cls)=>st===s?'':`<button class="${cls}" data-status="${s}">${label}</button>`;
   box.innerHTML=`<section class="approve"><h3>Freigabe</h3>
     <p class="state st-${st}"><span class="dot s-${st}"></span>${STATUS[st]}${st==='approved'&&it.approvedAt?` <small>${it.approvedBy?'von '+esc(nameFor(it.approvedBy))+' ':''}am ${esc(new Date(it.approvedAt).toLocaleDateString('de-DE'))}</small>`:''}</p>
@@ -850,7 +853,7 @@ function refreshLive(){
     <ul class="comments">${(it.comments||[]).map(c=>{const when=esc(new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}));
       return c.sys?`<li class="sys">${esc(c.text)}${c.v?', Version '+c.v:''}. ${c.by?esc(nameFor(c.by))+', ':''}${when}</li>`
       :`<li><div class="cm">${c.by?esc(nameFor(c.by))+', ':''}${when}${c.v?', zu Version '+c.v:''}</div><p>${esc(c.text)}</p></li>`}).join('')||'<li style="background:none;padding:0;color:var(--muted)">Noch keine Anmerkungen.</li>'}</ul>
-    ${S.readonly?'':`<div class="cform"><textarea id="cnew" rows="2" placeholder="${it.video&&S.openKind==='post'&&it.format==='reel'?'Anmerkung, gern mit Zeitangabe':'Anmerkung oder Änderungswunsch'}">${esc(draft)}</textarea><div class="cbtns"><button class="btn ghost" data-act="comment">Anmerkung senden</button>${it.video&&S.openKind==='post'&&it.format==='reel'?'<button class="btn ghost" data-act="ts">Zeitstempel aus dem Video</button>':''}</div></div>`}
+    ${S.readonly?'':`<div class="cform"><textarea id="cnew" rows="2" placeholder="${it.video&&S.openKind==='post'&&it.format==='reel'?'Anmerkung, gern mit Zeitangabe':'Anmerkung oder Änderungswunsch'}">${esc(draft)}</textarea>${st==='changes'?'':`<label class="cchk"><input type="checkbox" id="cchg" ${chk?'checked':''}>Muss angepasst werden</label>`}<div class="cbtns"><button class="btn ghost" data-act="comment">Anmerkung senden</button>${it.video&&S.openKind==='post'&&it.format==='reel'?'<button class="btn ghost" data-act="ts">Zeitstempel aus dem Video</button>':''}</div></div>`}
   </section>`;
 }
 function coll(){return S.openKind==='post'?'posts':'stories'}
@@ -962,7 +965,9 @@ document.addEventListener('click',e=>{
     case 'ts':{const v=$('#drawer video');const b=$('#cnew');if(!v||!b)break;v.pause();const sec=Math.floor(v.currentTime||0);
       const stamp=Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')+' ';b.value=b.value&&!/\s$/.test(b.value)?b.value+'\n'+stamp:b.value+stamp;b.focus();b.setSelectionRange(b.value.length,b.value.length);break}
     case 'rmimg':if(it){removeFile(it.img);it.img='';save(coll(),it);buildDrawer();render()}break;
-    case 'comment':{const b=$('#cnew');if(b&&b.value.trim()&&it){addComment(b.value);b.value='';save(coll(),it);refreshLive()}break}
+    case 'comment':{const b=$('#cnew');if(!(b&&b.value.trim()&&it))break;const ch=$('#cchg');
+      if(ch&&ch.checked){setStatus('changes');toast('Anmerkung gesendet, Status: Anpassung nötig.');break}
+      addComment(b.value);b.value='';save(coll(),it);refreshLive();break}
     case 'delete':if(it&&confirm(S.openKind==='post'?'Diesen Post löschen?':'Diese Story löschen?')){const c=coll(),id=it.id;mediaFiles(it).forEach(removeFile);S.posts=S.posts.filter(x=>x.id!==id);S.stories=S.stories.filter(x=>x.id!==id);closeDrawer();remove(c,id);render()}break;
   }
 });
