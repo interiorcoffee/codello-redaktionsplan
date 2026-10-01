@@ -944,7 +944,7 @@ function postView(p){
     ${rv('Was hinter der Kachel steckt',p.story)}
     ${fmt}
     ${rv('Caption',p.caption,{copy:'caption'})}
-    ${rv('Hashtags im ersten Kommentar'+(tags?' ('+tags+')':''),p.hashtags,{copy:'hashtags'})}
+    ${rv('Hashtags'+(tags?' ('+tags+')':''),p.hashtags,{copy:'hashtags'})}
     ${rv('Produktverlinkung',p.products)}
     ${link?rv('Veröffentlichter Post',p.igLink,{html:link}):''}
     <div id="live"></div>
@@ -1005,7 +1005,7 @@ function postForm(p){
     <label class="f">Was hinter der Kachel steckt<textarea rows="3" data-f="story" placeholder="Welche Geschichte erzählt dieser Post?">${esc(p.story)}</textarea></label>
     ${fmt}
     <label class="f">Caption<textarea rows="7" data-f="caption">${esc(p.caption)}</textarea><span class="count${capLen>2200?' over':''}" id="capc">${capLen} von 2.200 Zeichen</span></label>
-    <label class="f">Hashtags im ersten Kommentar<input data-f="hashtags" value="${esc(p.hashtags)}" placeholder="#codello"><span class="count${tags>5?' over':''}" id="tagc">${tags} von maximal 5</span></label>
+    <label class="f">Hashtags<input data-f="hashtags" value="${esc(p.hashtags)}" placeholder="#codello"><span class="count${tags>5?' over':''}" id="tagc">${tags} von maximal 5</span></label>
     <label class="f">Produktverlinkung<input data-f="products" value="${esc(p.products)}" placeholder="Produkte oder Links"></label>
     <label class="f">Link zum veröffentlichten Post<input type="url" data-f="igLink" value="${esc(p.igLink)}" placeholder="https://www.instagram.com/…"></label>
     ${p.igLink&&/^https?:\/\//i.test(p.igLink)?`<p style="margin:-8px 0 16px"><a class="golink" href="${esc(p.igLink)}" target="_blank" rel="noopener">Auf Instagram ansehen</a></p>`:''}
