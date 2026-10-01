@@ -278,6 +278,19 @@ fieldset.seg legend{font-size:14px;color:var(--muted);padding:0;margin-bottom:5p
 .arch h3{font-size:14px;font-weight:700;color:var(--muted);margin:18px 0 6px}
 .arch .sum{white-space:pre-wrap;margin:12px 0 4px;max-width:680px}
 .arch .none{color:var(--muted);font-size:14px}
+.rmeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 18px;margin:4px 0 8px}
+.rv{margin:0 0 16px}
+.rv .pview{margin:3px 0 0;font-size:15px;line-height:1.5;overflow-wrap:anywhere}
+.rv .plabel{display:flex;align-items:baseline;gap:10px}
+.rv .copy{font-size:13px;padding:0}
+.rv .pview a{color:var(--mint-deep)}
+.rslides{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
+.rslides li{background:var(--paper);border-radius:8px;padding:8px 11px;white-space:pre-wrap;font-size:15px}
+.rslides b{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:2px}
+.rpil{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:baseline}
+.rnote{background:var(--wash);border-radius:10px;padding:10px 13px;font-size:14px;color:var(--muted);margin:0 0 18px}
+.plan .pview{margin:0 0 6px}
+.rdays{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:4px;font-size:15px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -355,6 +368,9 @@ const RATIOS={'3/4':4/3,'4/5':5/4,'1/1':1};
 
 const now=new Date();
 const START='2026-10';
+/* Ob Teammitglieder Bilder hochladen dürfen (Kachel, Slides, Story-Bild, Feed-Übersicht).
+   Abschalten in config.js mit teamUploads:false. */
+const TEAM_UPLOADS=(window.PLAN_CONFIG||{}).teamUploads!==false;
 const CFG=window.PLAN_CONFIG||{};
 const S={month:ym(now)<START?START:ym(now),tab:'feed',settings:{perWeek:'',days:{},pillars:[],tileRatio:'3/4'},monthDoc:{},
   posts:[],stories:[],openKind:null,openId:null,filter:'all',sb:null,me:'',members:{},roles:{},isOwner:false,profile:{},notes:{},profileMissing:false,readonly:false};
@@ -389,6 +405,8 @@ async function signAll(){
   document.querySelectorAll('img[data-sb],video[data-sb]').forEach(i=>{const u=signed[i.dataset.sb];if(u&&i.getAttribute('src')!==u)i.src=u});
 }
 function removeFile(v){if(v&&v.startsWith('sb:')&&S.sb)S.sb.storage.from('tiles').remove([v.slice(3)]).then(({error})=>{if(error)console.warn(error)})}
+function ownerName(){const e=Object.keys(S.roles).find(k=>S.roles[k]==='owner');return e?(S.members[e]||'die Redaktion'):'die Redaktion'}
+function canUpload(){return S.isOwner||TEAM_UPLOADS}
 function nameFor(e){return e?(S.members[String(e).toLowerCase()]||e):'Jemand'}
 function pillar(id){return S.settings.pillars.find(p=>p.id===id)}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,3800)}
@@ -408,9 +426,30 @@ function enqueue(key,fn){pend[key]=(pend[key]||0)+1;
   const p=(Q[key]||Promise.resolve()).then(fn).catch(e=>{console.error(e);toast(errMsg(e))}).finally(()=>{pend[key]--});
   Q[key]=p;return p}
 function clean(o){const b=JSON.parse(JSON.stringify(o));delete b.id;return b}
+/* Posts und Stories werden nicht mehr komplett überschrieben. Gesendet werden nur die Felder,
+   die sich seit dem letzten Stand geändert haben, und neue Anmerkungen werden angehängt.
+   So überschreibt niemand die Änderung oder Anmerkung eines anderen. */
+const BASE={};let useRpc=true;
+function ckey(c){return (c.at||'')+'|'+(c.by||'')+'|'+(c.text||'')}
 function save(coll,obj){
-  const row={id:obj.id,month:obj.month,data:clean(obj),updated_at:new Date().toISOString()};
-  return enqueue(obj.id,async()=>{const {error}=await S.sb.from(coll).upsert(row);if(error)throw error});
+  const cur=clean(obj);const base=BASE[obj.id];const patch={};let add=[];
+  if(base){
+    Object.keys({...base,...cur}).forEach(k=>{if(k==='comments')return;if(JSON.stringify(cur[k]??null)!==JSON.stringify(base[k]??null))patch[k]=cur[k]??null});
+    const seen=new Set((base.comments||[]).map(ckey));add=(cur.comments||[]).filter(c=>!seen.has(ckey(c)));
+    if(!Object.keys(patch).length&&!add.length)return Q[obj.id]||Promise.resolve();
+  }else{Object.assign(patch,cur);delete patch.comments;add=cur.comments||[]}
+  BASE[obj.id]=cur;const month=obj.month;
+  return enqueue(obj.id,async()=>{
+    try{
+      if(useRpc){
+        const {error}=await S.sb.rpc('plan_patch',{tbl:coll,rid:obj.id,rmonth:month??null,patch,add_comments:add});
+        if(!error)return;
+        if(!(error.code==='PGRST202'||error.code==='42883'||/plan_patch/i.test(error.message||'')))throw error;
+        useRpc=false;console.warn('plan_patch fehlt, es wird der ganze Datensatz gespeichert.');
+      }
+      const {error}=await S.sb.from(coll).upsert({id:obj.id,month,data:cur,updated_at:new Date().toISOString()});if(error)throw error;
+    }catch(e){delete BASE[obj.id];throw e}
+  });
 }
 function remove(coll,id){return enqueue(id,async()=>{const {error}=await S.sb.from(coll).delete().eq('id',id);if(error)throw error})}
 function saveSettings(){
@@ -423,7 +462,7 @@ function saveMonth(){
 }
 function mergeRows(rows,local){
   const byId={};local.forEach(x=>byId[x.id]=x);
-  const out=(rows||[]).map(r=>pend[r.id]>0&&byId[r.id]?byId[r.id]:{id:r.id,...r.data});
+  const out=(rows||[]).map(r=>{if(pend[r.id]>0&&byId[r.id])return byId[r.id];BASE[r.id]=JSON.parse(JSON.stringify(r.data||{}));return {id:r.id,...r.data}});
   local.forEach(x=>{if(pend[x.id]>0&&!out.some(o=>o.id===x.id))out.push(x)});
   return out;
 }
@@ -585,7 +624,7 @@ function renderFeed(){
     <div class="grid">${tiles||`<div class="empty">Für ${esc(monthLabel(S.month))} ist noch nichts geplant.<br>Lade die Feed-Übersicht hoch oder lege die Termine aus dem Rhythmus an.</div>`}</div>
     <div class="side">
       <section><h2>Briefing für ${esc(MONTHS[+S.month.slice(5)-1])}</h2>
-        ${brief?`<p class="brief">${esc(brief.length>420?brief.slice(0,420)+'…':brief)}</p>`:`<p class="brief" style="color:var(--muted)">Noch kein Briefing. Im Tab Planung eintragen.</p>`}</section>
+        ${brief?`<p class="brief">${esc(brief.length>420?brief.slice(0,420)+'…':brief)}</p>`:`<p class="brief" style="color:var(--muted)">Noch kein Briefing.${S.isOwner?' Im Tab Planung eintragen.':''}</p>`}</section>
       <section><h2>Freigabestand</h2><div class="chips">
         ${['all','draft','review','changes','approved'].map(k=>`<button class="chip" data-filter="${k}" aria-pressed="${S.filter===k}">${k==='all'?'':`<span class="dot s-${k}"></span>`}${k==='all'?'Alle':STATUS[k]} ${counts[k]}</button>`).join('')}
       </div></section>
@@ -596,26 +635,27 @@ function renderFeed(){
       </section>
       ${sideProfile(list)}
       <section><h2>Rhythmus</h2><p class="rhythm">${S.settings.perWeek?esc(S.settings.perWeek)+' Posts pro Woche':'Frequenz noch offen'}${days.length?'<br>'+esc(days.join(', ')):''}</p></section>
-      <section class="actions" ${S.readonly?'hidden':''}>
+      ${S.isOwner?`<section class="actions">
         <button class="btn" data-act="feedupload">Feed-Übersicht hochladen</button>
         <button class="btn ghost" data-act="gen">Termine aus Rhythmus anlegen</button>
         <button class="btn ghost" data-act="addpost">Post hinzufügen</button>
-      </section>
+      </section>`:(canUpload()&&list.length?`<section class="actions"><button class="btn ghost" data-act="feedupload">Feed-Übersicht hochladen</button></section>`:'')}
     </div></div>`;
 }
 function renderStories(){
   const by={};S.stories.forEach(s=>{const k=s.date||'';(by[k]=by[k]||[]).push(s)});
   const keys=Object.keys(by).sort((a,b)=>(a||'9999').localeCompare(b||'9999'));
-  const html=keys.map(k=>{const list=dayStories(k);const n=list.length;return `<div class="storyday"><h2>${esc(fmtLong(k))}${S.readonly?'':` <button class="link" data-act="addstory" data-date="${esc(k)}">Weitere Story an diesem Tag</button>`}</h2><div class="srow">
+  const html=keys.map(k=>{const list=dayStories(k);const n=list.length;return `<div class="storyday"><h2>${esc(fmtLong(k))}${!S.isOwner?'':` <button class="link" data-act="addstory" data-date="${esc(k)}">Weitere Story an diesem Tag</button>`}</h2><div class="srow">
     ${list.map((s,i)=>{const st=s.status||'draft';return `<div class="sitem"><button class="scard" data-openstory="${s.id}" aria-label="Story ${i+1} von ${n} öffnen">
       <div class="sthumb">${s.img?imgTag(s.img,''):''}${n>1?`<span class="snum">${i+1}/${n}</span>`:''}${s.overlay?`<span class="ov">${esc(s.overlay.length>70?s.overlay.slice(0,70)+'…':s.overlay)}</span>`:(s.img?'':'<span style="color:var(--muted)">Noch kein Overlay</span>')}</div>
       <div class="sm">${esc(s.format||'Story')}${(s.comments||[]).length?`<span class="ccount">${SVG_MSG.replace('<svg','<svg width="13" height="13"')}${s.comments.length}</span>`:''}</div>
-      <div class="stext st-${st}">${STATUS[st]}</div></button>${!S.readonly&&n>1?ordControls(s,list):''}</div>`}).join('')}
+      <div class="stext st-${st}">${STATUS[st]}</div></button>${S.isOwner&&n>1?ordControls(s,list):''}</div>`}).join('')}
   </div></div>`}).join('');
-  $('#p-stories').innerHTML=`${S.readonly?'':'<div class="actions" style="margin-bottom:24px"><button class="btn" data-act="addstory" data-date="">Story hinzufügen</button></div>'}
+  $('#p-stories').innerHTML=`${!S.isOwner?'':'<div class="actions" style="margin-bottom:24px"><button class="btn" data-act="addstory" data-date="">Story hinzufügen</button></div>'}
     ${html||`<div class="empty">Noch keine Stories für ${esc(monthLabel(S.month))} geplant.</div>`}`;
 }
 function renderPlan(){
+  if(!S.isOwner){renderPlanView();return}
   const s=S.settings;const dis=S.readonly?'disabled':'';
   $('#p-plan').innerHTML=`<div class="plan">
     <h2>Briefing für ${esc(monthLabel(S.month))}</h2>
@@ -645,6 +685,24 @@ function renderPlan(){
   </div>`;
 }
 
+function renderPlanView(){
+  const s=S.settings;const brief=S.monthDoc.briefing||'';
+  const days=WD_ORDER.filter(d=>s.days[String(d)]?.on);
+  $('#p-plan').innerHTML=`<div class="plan">
+    <p class="rnote">Diese Einstellungen pflegt ${esc(ownerName())}. Wenn etwas nicht passt, schreibt es bitte als Anmerkung an einen Beitrag oder ins Markenprofil.</p>
+    <h2>Briefing für ${esc(monthLabel(S.month))}</h2>
+    <p class="pview${brief?'':' empty'}">${brief?esc(brief):'Noch kein Briefing eingetragen.'}</p>
+    <h2>Postingfrequenz</h2>
+    <p class="pview${s.perWeek?'':' empty'}">${s.perWeek?esc(s.perWeek)+' Posts pro Woche':'Noch offen'}</p>
+    <h2>Posting-Tage und Uhrzeiten</h2>
+    ${days.length?`<ul class="rdays">${days.map(d=>{const t=s.days[String(d)].time;return `<li>${WD_LONG[d]}${t?', '+esc(t)+' Uhr':''}</li>`}).join('')}</ul>`:'<p class="pview empty">Noch offen</p>'}
+    <h2>Content-Säulen</h2>
+    ${s.pillars.length?`<ul class="legend">${s.pillars.map(p=>`<li><span class="sw" style="background:${esc(p.color)}"></span><span><strong>${esc(p.name||'Ohne Namen')}</strong>${p.desc?` <span style="color:var(--muted)">${esc(p.desc)}</span>`:''}</span></li>`).join('')}</ul>`:'<p class="pview empty">Noch keine Säulen angelegt.</p>'}
+    <h2>Kachelformat im Raster</h2>
+    <p class="pview">${esc((s.tileRatio||'3/4').replace('/',':'))}</p>
+  </div>`;
+}
+
 /* ---------- Markenprofil ---------- */
 const FSTATUS={keep:'Keep',evolve:'Evolve',test:'Test',kill:'Kill'};
 function getPath(o,path){return path.split('.').reduce((a,k)=>a==null?undefined:a[k],o)}
@@ -655,7 +713,7 @@ function nogoHits(texts){const out=[];nogoList().forEach(n=>{let r;try{r=reFor(n
 function itemTexts(it){return [it.caption,it.hashtags,it.story,it.hook,it.reelFlow,it.audio,it.overlay,it.linkLabel,it.notes,...(it.slides||[])]}
 function updateNogo(){
   const box=$('#nogo');if(!box)return;
-  const texts=[...$('#drawer').querySelectorAll('textarea,input:not([type]),input[type=text]')].filter(e=>e.id!=='cnew').map(e=>e.value);
+  const texts=S.isOwner?[...$('#drawer').querySelectorAll('textarea,input:not([type]),input[type=text]')].filter(e=>e.id!=='cnew').map(e=>e.value):itemTexts(current()||{});
   const h=nogoHits(texts);
   box.innerHTML=h.length?`<div class="nogobox" role="alert">Steht auf der No-Go-Liste: ${h.map(n=>`<strong>${esc(n.word)}</strong>${n.alt?' (besser: '+esc(n.alt)+')':''}`).join(', ')}</div>`:'';
 }
@@ -834,22 +892,89 @@ function openItem(kind,id){S.openKind=kind;S.openId=id;buildDrawer()}
 function closeDrawer(){S.openId=null;S.openKind=null;$('#drawer').hidden=true;$('#scrim').hidden=true;$('#drawer').innerHTML=''}
 function buildDrawer(){
   const it=current();if(!it){closeDrawer();return}
-  const d=$('#drawer');d.innerHTML=S.openKind==='post'?postForm(it):storyForm(it);
+  const d=$('#drawer');d.innerHTML=S.openKind==='post'?(S.isOwner?postForm(it):postView(it)):(S.isOwner?storyForm(it):storyView(it));
   d.hidden=false;$('#scrim').hidden=false;refreshLive();updateNogo();
   if(S.readonly)d.querySelectorAll('input,select,textarea,.dbody button:not([data-act=close])').forEach(e=>e.disabled=true);
+}
+function slideGallery(p){
+  const m=p.media||[];const ctl=canUpload();
+  const gal=m.length?`<div class="gal">${m.map((v,i)=>`<figure><div class="gimg">${imgTag(v,'Slide '+(i+1))}</div><figcaption>Slide ${i+1}${!ctl?'':`<button class="x" data-mmove="${i}" data-dir="-1" aria-label="Slide ${i+1} nach vorn" ${i===0?'disabled':''}>‹</button><button class="x" data-mmove="${i}" data-dir="1" aria-label="Slide ${i+1} nach hinten" ${i===m.length-1?'disabled':''}>›</button><button class="x" data-mdel="${i}" aria-label="Slide ${i+1} entfernen">×</button>`}</figcaption></figure>`).join('')}</div>
+      <p class="vnote">${m.length===1?'Ein Bild':m.length+' Bilder'}${p.mv?', Version '+p.mv:''}. Die Slides erscheinen nur hier, im Raster steht weiter die Kachel.</p>`
+    :`<p class="vnote">Noch keine Bilder.${ctl?' Hier kommen alle Slides in der richtigen Reihenfolge hinein.':''} Im Raster steht weiter nur die Kachel.</p>`;
+  return `<p class="stage">So sieht das Karussell aus</p>${gal}
+      ${ctl?'<p><label class="btn ghost">Bilder hinzufügen<input type="file" accept="image/*" multiple data-media hidden></label></p>':''}`;
+}
+function rv(label,val,o){o=o||{};const v=val==null?'':String(val);
+  return `<div class="rv"><p class="plabel"><span>${label}</span>${o.copy&&v?`<button class="link copy" data-copy="${o.copy}">Kopieren</button>`:''}</p><p class="pview${v?'':' empty'}">${o.html&&v?o.html:(v?esc(v):(o.empty||'Noch offen'))}</p></div>`}
+function imgRow(it,story){
+  const label=story?'Bild':'Kachel';
+  const acts=canUpload()?`<div class="imgacts"><label class="btn ghost">${it.img?label+' ersetzen':label+' hochladen'}<input type="file" accept="image/*" data-file="img" hidden></label>${it.img?`<button class="link" data-act="rmimg">${label} entfernen</button>`:''}</div>`:'';
+  return `<div class="imgrow"><div class="thumb${story?' story':''}">${it.img?imgTag(it.img,label):(story?'Noch kein Bild':'Noch keine Kachel')}</div>${acts}</div>`;
+}
+/* Leseansicht für Teammitglieder: alles sehen, nur Freigabe und Anmerkungen */
+function postView(p){
+  const pl=pillar(p.pillar);const f=p.format||'single';const ser=formats().find(x=>x.id===p.series);
+  const tags=((p.hashtags||'').match(/#[^\s#]+/g)||[]).length;
+  let fmt='';
+  if(f==='carousel'){
+    const sl=(p.slides||[]).filter(x=>x&&x.trim());
+    fmt=`<div class="box"><h3>Slides</h3>${slideGallery(p)}
+      <p class="stage">Motiv und Text je Slide</p>
+      ${sl.length?`<ol class="rslides">${(p.slides||[]).map((t,i)=>t&&t.trim()?`<li><b>Slide ${i+1}</b>${esc(t)}</li>`:'').join('')}</ol>`:'<p class="pview empty">Noch offen</p>'}</div>`;
+  }else if(f==='reel'){
+    fmt=`<div class="box"><h3>Reel</h3>
+      <p class="stage">Stufe 1: Konzept</p>
+      ${rv('Hook in den ersten Sekunden',p.hook)}${rv('Ablauf und Text-Overlays im Wortlaut',p.reelFlow)}${rv('Musik oder Voice-Over',p.audio)}
+      <div class="vermerk" id="concept">${conceptInner(p)}</div>
+      <p class="stage">Stufe 2: Schnitt</p>
+      ${p.video?`<div class="vwrap">${vidTag(p.video)}</div><p class="vnote">Version ${p.mv||1}. Anmerkungen am besten mit Zeitangabe, zum Beispiel „0:04 Overlay steht zu kurz“.</p>`:'<p class="vnote">Noch keine Vorschau.</p>'}
+    </div>`;
+  }
+  const link=p.igLink&&/^https?:\/\//i.test(p.igLink)?`<a href="${esc(p.igLink)}" target="_blank" rel="noopener">Auf Instagram ansehen</a>`:'';
+  return `<div class="dh"><div><p>${esc(fmtLong(p.date))}${p.time?', '+esc(p.time)+' Uhr':''}</p><h2>${esc(FORMATS[f])}${pl?' für '+esc(pl.name):''}</h2></div><button class="round" data-act="close" aria-label="Schließen">×</button></div>
+  <div class="dbody">
+    ${brandLine()}<div id="nogo"></div>
+    ${imgRow(p,false)}
+    <div class="rmeta">
+      ${rv('Datum',p.date?fmtLong(p.date):'')}${rv('Uhrzeit',p.time?p.time+' Uhr':'')}
+      ${rv('Format',FORMATS[f])}
+      ${rv('Content-Säule',pl?(pl.name||'Ohne Namen'):'',{html:pl?`<span class="rpil" style="background:${esc(pl.color)}"></span>${esc(pl.name||'Ohne Namen')}`:''})}
+      ${rv('Wiederkehrendes Format',ser?ser.name:'',{empty:'Keins'})}
+    </div>
+    ${rv('Was hinter der Kachel steckt',p.story)}
+    ${fmt}
+    ${rv('Caption',p.caption,{copy:'caption'})}
+    ${rv('Hashtags im ersten Kommentar'+(tags?' ('+tags+')':''),p.hashtags,{copy:'hashtags'})}
+    ${rv('Produktverlinkung',p.products)}
+    ${link?rv('Veröffentlichter Post',p.igLink,{html:link}):''}
+    <div id="live"></div>
+  </div>`;
+}
+function storyView(s){
+  const lp=S.posts.find(p=>p.id===s.post);
+  const list=dayStories(s.date);const n=list.length;const i=list.findIndex(x=>x.id===s.id);
+  const link=s.link&&/^https?:\/\//i.test(s.link)?`<a href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.link)}</a>`:'';
+  return `<div class="dh"><div><p>${esc(fmtLong(s.date))}</p><h2>Story: ${esc(s.format||'')}</h2></div><button class="round" data-act="close" aria-label="Schließen">×</button></div>
+  <div class="dbody">
+    ${brandLine()}<div id="nogo"></div>
+    ${n>1?`<div class="spos">Story ${i+1} von ${n} an diesem Tag</div>`:''}
+    ${imgRow(s,true)}
+    <div class="rmeta">${rv('Datum',s.date?fmtLong(s.date):'')}${rv('Format',s.format)}</div>
+    ${rv('Gehört zu Post',lp?fmtShort(lp.date)+', '+FORMATS[lp.format||'single']+(pillar(lp.pillar)?', '+pillar(lp.pillar).name:''):'',{empty:'Kein Post'})}
+    ${rv('Text-Overlay',s.overlay,{copy:'overlay'})}
+    <div class="rmeta">${rv('Link',s.link,{html:link,empty:'Kein Link'})}${rv('Text auf dem Link-Sticker',s.linkLabel,{empty:'–'})}</div>
+    ${rv('Idee und Ablauf',s.notes)}
+    <div id="live"></div>
+  </div>`;
 }
 function postForm(p){
   const pl=pillar(p.pillar);const f=p.format||'single';
   const capLen=(p.caption||'').length;const tags=((p.hashtags||'').match(/#[^\s#]+/g)||[]).length;
   let fmt='';
   if(f==='carousel'){
-    const sl=p.slides&&p.slides.length?p.slides:[''];const m=p.media||[];
-    const gal=m.length?`<div class="gal">${m.map((v,i)=>`<figure><div class="gimg">${imgTag(v,'Slide '+(i+1))}</div><figcaption>Slide ${i+1}${S.readonly?'':`<button class="x" data-mmove="${i}" data-dir="-1" aria-label="Slide ${i+1} nach vorn" ${i===0?'disabled':''}>‹</button><button class="x" data-mmove="${i}" data-dir="1" aria-label="Slide ${i+1} nach hinten" ${i===m.length-1?'disabled':''}>›</button><button class="x" data-mdel="${i}" aria-label="Slide ${i+1} entfernen">×</button>`}</figcaption></figure>`).join('')}</div>
-      <p class="vnote">${m.length===1?'Ein Bild':m.length+' Bilder'}${p.mv?', Version '+p.mv:''}. Die Slides erscheinen nur hier, im Raster steht weiter die Kachel.</p>`
-      :'<p class="vnote">Noch keine Bilder. Hier kommen alle Slides in der richtigen Reihenfolge hinein. Im Raster steht weiter nur die Kachel.</p>';
+    const sl=p.slides&&p.slides.length?p.slides:[''];
     fmt=`<div class="box"><h3>Slides</h3>
-      <p class="stage">So sieht das Karussell aus</p>${gal}
-      ${S.readonly?'':'<p><label class="btn ghost">Bilder hinzufügen<input type="file" accept="image/*" multiple data-media hidden></label></p>'}
+      ${slideGallery(p)}
       <p class="stage">Motiv und Text je Slide</p>
       ${sl.map((t,i)=>`<div class="slide"><div class="sh">Slide ${i+1}${sl.length>1?`<button class="link" data-act="rmslide" data-i="${i}">entfernen</button>`:''}</div><textarea rows="2" data-slide="${i}" placeholder="Motiv und Text auf der Slide">${esc(t)}</textarea></div>`).join('')}
       <p><button class="link" data-act="addslide">Slide hinzufügen</button></p></div>`;
@@ -866,14 +991,13 @@ function postForm(p){
       <div class="vermerk" id="concept">${conceptInner(p)}</div>
       <p class="stage">Stufe 2: Schnitt</p>
       ${vid}
-      ${S.readonly?'':`<div class="actions"><label class="btn ghost">${p.video?'Neue Version hochladen':'Vorschau hochladen'}<input type="file" accept="video/mp4,video/quicktime,video/*" data-video hidden></label>${p.video?'<button class="link" data-act="rmvideo">Vorschau löschen</button>':''}</div>`}
+      ${!S.isOwner?'':`<div class="actions"><label class="btn ghost">${p.video?'Neue Version hochladen':'Vorschau hochladen'}<input type="file" accept="video/mp4,video/quicktime,video/*" data-video hidden></label>${p.video?'<button class="link" data-act="rmvideo">Vorschau löschen</button>':''}</div>`}
     </div>`;
   }
   return `<div class="dh"><div><p>${esc(fmtLong(p.date))}${p.time?', '+esc(p.time)+' Uhr':''}</p><h2>${esc(FORMATS[f])}${pl?' für '+esc(pl.name):''}</h2></div><button class="round" data-act="close" aria-label="Schließen">×</button></div>
   <div class="dbody">
     ${brandLine()}<div id="nogo"></div>
-    <div class="imgrow"><div class="thumb">${p.img?imgTag(p.img,'Kachel'):'Noch keine Kachel'}</div>
-      <div class="imgacts"><label class="btn ghost">${p.img?'Kachel ersetzen':'Kachel hochladen'}<input type="file" accept="image/*" data-file="img" hidden></label>${p.img?'<button class="link" data-act="rmimg">Kachel entfernen</button>':''}</div></div>
+    ${imgRow(p,false)}
     <div class="row2"><label class="f">Datum<input type="date" data-f="date" value="${esc(p.date)}"></label><label class="f">Uhrzeit<input type="time" data-f="time" value="${esc(p.time)}"></label></div>
     <fieldset class="seg"><legend>Format</legend><div class="segs">${Object.entries(FORMATS).map(([k,v])=>`<label><input type="radio" name="fmt" value="${k}" data-f="format" ${f===k?'checked':''}>${v}</label>`).join('')}</div></fieldset>
     <label class="f">Content-Säule<select data-f="pillar"><option value="">Noch offen</option>${S.settings.pillars.map(x=>`<option value="${esc(x.id)}" ${x.id===p.pillar?'selected':''}>${esc(x.name||'Ohne Namen')}</option>`).join('')}</select></label>
@@ -895,9 +1019,8 @@ function storyForm(s){
   <div class="dbody">
     ${brandLine()}<div id="nogo"></div>
     ${(()=>{const list=dayStories(s.date);const n=list.length;if(n<2)return '';const i=list.findIndex(x=>x.id===s.id);
-      return `<div class="spos">Story ${i+1} von ${n} an diesem Tag${S.readonly?'':ordControls(s,list)}</div>`})()}
-    <div class="imgrow"><div class="thumb story">${s.img?imgTag(s.img,'Story'):'Noch kein Bild'}</div>
-      <div class="imgacts"><label class="btn ghost">${s.img?'Bild ersetzen':'Bild hochladen'}<input type="file" accept="image/*" data-file="img" hidden></label>${s.img?'<button class="link" data-act="rmimg">Bild entfernen</button>':''}</div></div>
+      return `<div class="spos">Story ${i+1} von ${n} an diesem Tag${S.isOwner?ordControls(s,list):''}</div>`})()}
+    ${imgRow(s,true)}
     <div class="row2"><label class="f">Datum<input type="date" data-f="date" value="${esc(s.date)}"></label>
       <label class="f">Format<select data-f="format">${STORY_FORMATS.map(x=>`<option ${x===s.format?'selected':''}>${esc(x)}</option>`).join('')}</select></label></div>
     <label class="f">Gehört zu Post<select data-f="post"><option value="">Kein Post</option>${posts.map(p=>`<option value="${p.id}" ${p.id===s.post?'selected':''}>${esc(fmtShort(p.date)+', '+FORMATS[p.format||'single']+(pillar(p.pillar)?', '+pillar(p.pillar).name:''))}</option>`).join('')}</select></label>
@@ -916,12 +1039,14 @@ function refreshLive(){
   const btn=(s,label,cls)=>st===s?'':`<button class="${cls}" data-status="${s}">${label}</button>`;
   box.innerHTML=`<section class="approve"><h3>Freigabe</h3>
     <p class="state st-${st}"><span class="dot s-${st}"></span>${STATUS[st]}${st==='approved'&&it.approvedAt?` <small>${it.approvedBy?'von '+esc(nameFor(it.approvedBy))+' ':''}am ${esc(new Date(it.approvedAt).toLocaleDateString('de-DE'))}</small>`:''}</p>
-    ${S.readonly?'':`<div class="actions" style="margin-bottom:20px">${btn('approved','Freigeben','btn ok')}${btn('changes','Anpassung anfordern','btn ghost')}${st==='draft'?btn('review','Zur Freigabe geben','btn ghost'):''}${st!=='draft'?btn('draft','Zurück auf Entwurf','link'):''}</div>`}
+    ${S.readonly?'':S.isOwner?`<div class="actions" style="margin-bottom:20px">${btn('approved','Freigeben','btn ok')}${btn('changes','Anpassung anfordern','btn ghost')}${st==='draft'?btn('review','Zur Freigabe geben','btn ghost'):''}${st!=='draft'?btn('draft','Zurück auf Entwurf','link'):''}</div>`
+      :st==='draft'?'<p class="vnote" style="margin:-4px 0 20px">Noch in Arbeit. Freigeben könnt ihr, sobald der Beitrag zur Freigabe bereitsteht. Anmerkungen gehen schon jetzt.</p>'
+      :`<div class="actions" style="margin-bottom:20px">${btn('approved','Freigeben','btn ok')}${btn('changes','Anpassung anfordern','btn ghost')}</div>`}
     <h3>Anmerkungen</h3>
     <ul class="comments">${(it.comments||[]).map(c=>{const when=esc(new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}));
       return c.sys?`<li class="sys">${esc(c.text)}${c.v?', Version '+c.v:''}. ${c.by?esc(nameFor(c.by))+', ':''}${when}</li>`
       :`<li><div class="cm">${c.by?esc(nameFor(c.by))+', ':''}${when}${c.v?', zu Version '+c.v:''}</div><p>${esc(c.text)}</p></li>`}).join('')||'<li style="background:none;padding:0;color:var(--muted)">Noch keine Anmerkungen.</li>'}</ul>
-    ${S.readonly?'':`<div class="cform"><textarea id="cnew" rows="2" placeholder="${it.video&&S.openKind==='post'&&it.format==='reel'?'Anmerkung, gern mit Zeitangabe':'Anmerkung oder Änderungswunsch'}">${esc(draft)}</textarea>${st==='changes'?'':`<label class="cchk"><input type="checkbox" id="cchg" ${chk?'checked':''}>Muss angepasst werden</label>`}<div class="cbtns"><button class="btn ghost" data-act="comment">Anmerkung senden</button>${it.video&&S.openKind==='post'&&it.format==='reel'?'<button class="btn ghost" data-act="ts">Zeitstempel aus dem Video</button>':''}</div></div>`}
+    ${S.readonly?'':`<div class="cform"><textarea id="cnew" rows="2" placeholder="${it.video&&S.openKind==='post'&&it.format==='reel'?'Anmerkung, gern mit Zeitangabe':'Anmerkung oder Änderungswunsch'}">${esc(draft)}</textarea>${(st==='changes'||(!S.isOwner&&st==='draft'))?'':`<label class="cchk"><input type="checkbox" id="cchg" ${chk?'checked':''}>Muss angepasst werden</label>`}<div class="cbtns"><button class="btn ghost" data-act="comment">Anmerkung senden</button>${it.video&&S.openKind==='post'&&it.format==='reel'?'<button class="btn ghost" data-act="ts">Zeitstempel aus dem Video</button>':''}</div></div>`}
   </section>`;
 }
 function coll(){return S.openKind==='post'?'posts':'stories'}
@@ -943,7 +1068,8 @@ function addComment(text){
   it.comments=[...(it.comments||[]),c];
 }
 function setStatus(s){
-  const it=current();if(!it)return;const box=$('#cnew');
+  const it=current();if(!it)return;
+  if(!S.isOwner&&(s==='draft'||s==='review'||(it.status||'draft')==='draft'))return;const box=$('#cnew');
   if(s==='changes'&&box&&!box.value.trim()){toast('Schreib kurz dazu, was angepasst werden soll.');box.focus();return}
   if(box&&box.value.trim()){addComment(box.value);box.value=''}
   it.status=s;
@@ -956,7 +1082,7 @@ function openFeedModal(){
   const m=$('#modal');
   m.innerHTML=`<div class="scrim" data-act="mclose"></div><div class="mbox" role="dialog" aria-label="Feed-Übersicht hochladen">
     <h2>Feed-Übersicht hochladen</h2>
-    <p>Ein Bild mit dem geplanten Raster, drei Kacheln pro Reihe, oben links der neueste Post. Das Tool schneidet daraus die einzelnen Kacheln und ordnet sie den Terminen zu.</p>
+    <p>Ein Bild mit dem geplanten Raster, drei Kacheln pro Reihe, oben links der neueste Post. Das Tool schneidet daraus die einzelnen Kacheln und ordnet sie den ${S.isOwner?'Terminen':'geplanten Posts'} zu.</p>
     <label class="btn ghost" style="margin-bottom:14px">Bild auswählen<input type="file" accept="image/*" id="feedfile" hidden></label>
     <div id="fstep" hidden>
       <div class="prev"><img id="fimg" alt="Vorschau"><svg class="lines" id="flines" preserveAspectRatio="none"></svg></div>
@@ -973,6 +1099,7 @@ function openFeedModal(){
     for(let r=1;r<rows;r++)l+=`<line x1="0" y1="${r*h/rows}" x2="300" y2="${r*h/rows}" stroke="#fff" stroke-width="1.5"/>`;
     sv.innerHTML=l;
     const n=rows*3;const existing=S.posts.length;
+    if(!S.isOwner){$('#finfo').textContent=n>existing?`Ergibt ${n} Kacheln. Geplant sind ${existing} Posts, deshalb werden nur die ersten ${existing} übernommen. Neue Termine legt ${ownerName()} an.`:`Ergibt ${n} Kacheln. Sie landen auf den bereits geplanten Posts.`;return}
     $('#finfo').textContent=`Ergibt ${n} Kacheln. `+(existing?`${Math.min(existing,n)} davon landen auf bereits geplanten Posts${n>existing?', '+(n-existing)+' werden neu angelegt':''}.`:'Die Posts werden neu angelegt, mit Terminen aus eurem Rhythmus.');
   };
   const autoRows=()=>{if(!img)return;const tileH=(img.naturalWidth/3)*RATIOS[$('#fratio').value];$('#frows').value=Math.max(1,Math.round(img.naturalHeight/tileH));draw()};
@@ -980,15 +1107,15 @@ function openFeedModal(){
   $('#fratio').onchange=autoRows;$('#frows').oninput=draw;
   $('#fgo').onclick=async()=>{
     const btn=$('#fgo');btn.disabled=true;
-    const rows=Math.max(1,+$('#frows').value||1);const n=rows*3;const tw=img.naturalWidth/3,th=img.naturalHeight/rows;
-    const ratio=$('#fratio').value;if(ratio!==S.settings.tileRatio){S.settings.tileRatio=ratio;saveSettings()}
+    const rows=Math.max(1,+$('#frows').value||1);const n=S.isOwner?rows*3:Math.min(rows*3,S.posts.length);const tw=img.naturalWidth/3,th=img.naturalHeight/rows;
+    const ratio=$('#fratio').value;if(S.isOwner&&ratio!==S.settings.tileRatio){S.settings.tileRatio=ratio;saveSettings()}
     const list=gridOrder();
     const used=new Set(S.posts.map(p=>p.date).filter(Boolean));
     const free=plannedDates(S.month).filter(x=>!used.has(x.date)).reverse();
     while(list.length<n){const d=free.shift();list.push(blankPost(d?d.date:'',d?d.time:''))}
     for(let i=0;i<n;i++){
       btn.textContent=`Kachel ${i+1} von ${n}…`;
-      const r=Math.floor(i/3),c=i%3;
+      const r=Math.floor(i/3),c=i%3;if(!list[i])break;
       const stored=await storeCanvas(cut(img,c*tw,r*th,tw,th,900));
       const p=list[i];p.img=stored;await save('posts',p);
     }
@@ -997,10 +1124,15 @@ function openFeedModal(){
 }
 
 /* ---------- Events ---------- */
+const OWNER_ONLY=new Set(['addpost','addstory','gen','pillardraft','addpillar','addslide','rmslide','rmvideo','delete']);
+const UPLOAD_ACTS=new Set(['feedupload','rmimg']);
 document.addEventListener('click',e=>{
   const t=e.target.closest('button,[data-act]');if(!t)return;
   if(t.dataset.tab){S.tab=t.dataset.tab;render();return}
   if(t.dataset.open){openItem('post',t.dataset.open);return}
+  if(t.dataset.copy){const it=current();const v=it&&it[t.dataset.copy];if(v&&navigator.clipboard)navigator.clipboard.writeText(v).then(()=>toast('Kopiert.'),()=>toast('Kopieren hat nicht geklappt.'));return}
+  if(!S.isOwner&&(t.dataset.smove||t.dataset.pcolor!==undefined||t.dataset.pdel!==undefined))return;
+  if(!canUpload()&&(t.dataset.mmove!==undefined||t.dataset.mdel!==undefined))return;
   if(t.dataset.smove){moveStory(t.dataset.smove,+t.dataset.dir);return}
   if(t.dataset.openstory){openItem('story',t.dataset.openstory);return}
   if(t.dataset.filter){S.filter=S.filter===t.dataset.filter?'all':t.dataset.filter;render();return}
@@ -1012,6 +1144,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.mdel!==undefined){const it=current();if(!it)return;const i=+t.dataset.mdel;if(!confirm('Slide '+(i+1)+' entfernen?'))return;
     const m=[...(it.media||[])];const [v]=m.splice(i,1);it.media=m;removeFile(v);const reset=newVersion(it,'Slide '+(i+1)+' entfernt');save('posts',it);buildDrawer();render();if(reset)toast('Slide entfernt. Die Freigabe wurde zurückgesetzt.');return}
   const a=t.dataset.act;if(!a)return;
+  if(!S.isOwner&&(OWNER_ONLY.has(a)||(UPLOAD_ACTS.has(a)&&!canUpload())))return;
   const it=current();
   switch(a){
     case 'close':closeDrawer();break;
@@ -1051,6 +1184,8 @@ function shiftMonth(n){const [y,m]=S.month.split('-').map(Number);S.month=ym(new
 const drawer=$('#drawer');
 drawer.addEventListener('change',async e=>{
   const t=e.target;
+  if(!S.isOwner&&(t.dataset.f||t.dataset.slide!==undefined||t.dataset.video!==undefined))return;
+  if(!canUpload()&&(t.dataset.file||t.dataset.media!==undefined))return;
   if(t.dataset.file){const f=t.files[0];if(!f)return;const it=current();if(!it)return;
     toast('Bild wird gespeichert…');
     try{const old=it.img;const v=await fileToStored(f,1080);it.img=v;removeFile(old);save(coll(),it);buildDrawer();render();toast('Bild gespeichert.')}catch(err){toast(err.message||'Bild konnte nicht gespeichert werden.')}
@@ -1081,6 +1216,7 @@ drawer.addEventListener('input',e=>{
 });
 const plan=$('#p-plan');
 plan.addEventListener('change',e=>{
+  if(!S.isOwner)return;
   const t=e.target;const s=S.settings;
   if(t.dataset.pf==='briefing'){S.monthDoc.briefing=t.value;saveMonth();return}
   if(t.dataset.sf==='perWeek'){s.perWeek=t.value;saveSettings();return}
